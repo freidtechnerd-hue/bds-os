@@ -1,0 +1,5 @@
+lwIP 2.2.1, unmodified upstream source.
+https://github.com/lwip-tcpip/lwip
+Commit 77dcd25a72509eb83f72b033d219b1d40cd8eb95
+Tag STABLE-2_2_1_RELEASE, annotated tag 009c2256469004009488b3385ba269461e8eb616.
+License: COPYING. BDS port/configuration live outside this directory.

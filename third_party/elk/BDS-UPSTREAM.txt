@@ -1,0 +1,6 @@
+https://github.com/cesanta/elk
+commit 71a86fa2fef146696be9ae66715bf3f91d0a5f2c
+BDS modifications: execution budget (including empty loops), nested evaluation
+and C stack limits, exported property getter, freestanding numeric output,
+primitive string concatenation and non-integer numeric equality. See elk.c/h.
+Browser DOM integration is in apps/browser_script.h. Upstream license: AGPL-3.0.

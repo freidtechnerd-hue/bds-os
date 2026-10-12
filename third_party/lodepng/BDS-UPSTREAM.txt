@@ -1,0 +1,5 @@
+https://github.com/lvandeve/lodepng
+Commit e584a8490db1b76b81bf298c11c09d3b55d9c270
+Upstream lodepng.cpp renamed lodepng.c for supported C compilation.
+No other source changes. Copyright/license remain in both files and LICENSE.
+Encoder, disk I/O and ancillary chunk support disabled with compiler flags.

@@ -1,0 +1,4 @@
+Gumbo 0.10.1, unmodified upstream source.
+https://github.com/google/gumbo-parser
+Commit 3973c58d759574f2899528d2b3379e17d66dbcad
+Tag v0.10.1. License: COPYING. BDS integration lives outside this directory.

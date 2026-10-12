@@ -1,0 +1,3 @@
+https://github.com/jay-kumogata/InfoNES
+Commit: fe3295c0a86bf5bbecc22aeab3b3af11f6f47908
+Vendored core and upstream frontend sources; BDS port is in nes/.

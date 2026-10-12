@@ -1,0 +1,5 @@
+https://github.com/PicoPlus-devel/pico-infonesPlus
+Commit: eed95b61edd6d31ed0fc30410afad3e9a5e709ca
+Source: infones/mapper/InfoNES_Mapper_090.cpp
+License: GPL-3.0 (retained in MAPPER90-LICENSE)
+BDS adaptation: remove save-state hook assignments; declare IRQ_Wiring.

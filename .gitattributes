@@ -1,0 +1,15 @@
+* text=auto eol=lf
+*.c text eol=lf
+*.h text eol=lf
+*.cpp text eol=lf
+*.asm text eol=lf
+*.py text eol=lf
+*.md text eol=lf
+*.cfg text eol=lf
+Makefile text eol=lf
+*.png binary
+*.BMP binary
+*.ICO binary
+*.PSF binary
+*.MP3 binary
+*.MID binary
