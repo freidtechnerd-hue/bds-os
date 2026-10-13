@@ -217,8 +217,8 @@ off and VBE modes vary, so start in a VM before choosing hardware.
   to finish. On unsupported ACPI firmware, use the VM/physical power control
   after file activity has stopped.
 
-To add ROMs, copy files from a boot-time attached FAT volume using File Manager
-or shell `COPY`, or use [the offline import tools](NES.md). Never mount or edit
+To add ROMs, browse a boot-time attached FAT volume and copy files with the
+shell `COPY` command, or use [the offline import tools](NES.md). Never mount or edit
 the same image simultaneously from the guest and host. Public builds contain
 no commercial games; personal ROMs and saves should stay out of public forks.
 

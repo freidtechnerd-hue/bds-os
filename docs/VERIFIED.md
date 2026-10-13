@@ -29,6 +29,13 @@ The NES File Manager assertion was updated to expect the new `V0:/` qualified
 path. Physical PCs, unsupported PCI devices and modern web compatibility are
 not covered by these results.
 
+The public installer passed the same eight installation/cold-boot cases and
+four no-write refusal cases as the personal installer. See the
+[exact release report](RELEASE-2026-10-12.md) for its SHA-256 and results.
+The exported source was also built in an empty Linux temporary directory with
+only the pinned Freedoom archive supplied; compilation, six integrity tests,
+legacy boot, GRUB boot and persistence all passed.
+
 ## Earlier checkpoints
 
 The cloud desktop/Ethernet update adds `make test-network`: three-second
