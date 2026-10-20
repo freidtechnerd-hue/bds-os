@@ -1,22 +1,36 @@
 #include "os.h"
 #include "storage.h"
 static u32 surface[800*600];static BdsApi*current;
+static int captured;
 static int full,menu,prev,shown,xpos,ypos,cw,ch,opening,closing;static char title[256],openpath[256];
+/* Apps draw in 800x600 logical pixels. Use the same fitted rectangle for
+   presentation, pointer mapping and the public viewport API. */
+static void content_rect(int*x,int*y,int*w,int*h){
+    if(!full){*x=xpos;*y=ypos+48;*w=cw;*h=ch;return;}
+    *w=screen_w;*h=*w*3/4;if(*h>screen_h){*h=screen_h;*w=*h*4/3;}
+    *x=(screen_w-*w)/2;*y=(screen_h-*h)/2;
+}
 static const char*appname(void){const char*p=title;for(const char*s=title;*s;s++)if(*s=='/')p=s;return p;}
-int app_pointer(int*x,int*y){input_poll();int ox=full?0:xpos,oy=full?0:ypos+48,w=full?screen_w:cw,h=full?screen_h:ch;*x=*y=-1;if(!current||menu||mouse_x<ox||mouse_x>=ox+w||mouse_y<oy||mouse_y>=oy+h)return 0;*x=(mouse_x-ox)*800/w;*y=(mouse_y-oy)*600/h;return mouse_buttons;}
+int app_pointer(int*x,int*y){input_poll();int ox,oy,w,h;content_rect(&ox,&oy,&w,&h);*x=*y=-1;if(!current||menu||mouse_x<ox||mouse_x>=ox+w||mouse_y<oy||mouse_y>=oy+h)return 0;*x=(mouse_x-ox)*800/w;*y=(mouse_y-oy)*600/h;return mouse_buttons;}
+void app_viewport(int*w,int*h){int x,y;content_rect(&x,&y,w,h);}
+void app_surface_blit(const u32*p,int sw,int sh,int x,int y,int w,int h){
+    if(!p||sw<1||sh<1||sw>1920||sh>1200||w<1||h<1||x<0||y<0||x>800-w||y>600-h)return;
+    for(int j=0;j<h;j++)for(int i=0;i<w;i++)surface[(y+j)*800+x+i]=p[(j*sh/h)*sw+i*sw/w];
+}
 extern u8 font_row(u8,int);
 void app_rect(int x,int y,int w,int h,u32 c){if(x<0){w+=x;x=0;}if(y<0){h+=y;y=0;}if(x+w>800)w=800-x;if(y+h>600)h=600-y;for(int j=0;j<h;j++)for(int i=0;i<w;i++)surface[(y+j)*800+x+i]=c;}
 void app_text(int x,int y,const char*s,u32 c){int base=x;while(*s){u8 k=*s++;if(k=='\n'){x=base;y+=12;continue;}for(int j=0;j<8;j++)for(int i=0;i<8;i++)if(font_row(k,j)&(1<<i))app_rect(x+i,y+j,1,1,c);x+=8;}}
 void app_fullscreen(int value){if(!current)return;full=value<0?!full:!!value;menu=0;serial(full?"APP fullscreen enabled\n":"APP windowed enabled\n");}
-void app_begin(BdsApi*api,const char*path){current=api;full=menu=shown=opening=closing=0;prev=mouse_buttons&1;strcpy(title,path);memset(surface,0,sizeof(surface));cw=screen_w-160;if(cw>640)cw=640;if(cw<320)cw=320;ch=cw*3/4;if(ch>screen_h-112){ch=screen_h-112;cw=ch*4/3;}xpos=(screen_w-cw)/2;ypos=(screen_h-ch-52)/2;serial("APP windowed launch: ");serial(path);serial("\n");}
-void app_end(void){current=0;menu=0;}
+void app_begin(BdsApi*api,const char*path){current=api;captured=0;full=menu=shown=opening=closing=0;prev=mouse_buttons&1;strcpy(title,path);memset(surface,0,sizeof(surface));cw=screen_w-160;if(cw>640)cw=640;if(cw<320)cw=320;ch=cw*3/4;if(ch>screen_h-112){ch=screen_h-112;cw=ch*4/3;}xpos=(screen_w-cw)/2;ypos=(screen_h-ch-52)/2;serial("APP windowed launch: ");serial(path);serial("\n");}
+int app_mouse_capture(int enabled){int old=captured,x,y;captured=current&&!!enabled;if(old!=captured){mouse_x=full?screen_w/2:xpos+cw/2;mouse_y=full?screen_h/2:ypos+48+ch/2;}input_relative(&x,&y);return old;}
+void app_end(void){captured=0;current=0;menu=0;}
 static void action(int row){
-    if(menu==1){if(row==0){char p[256];const char*filter=!stricmp(appname(),"/NES.RUN")?".NES":!stricmp(appname(),"/PLAYER.RUN")?".MP3;.MID;.MIDI":!stricmp(appname(),"/IMAGE.RUN")?".BMP;.PNG":!stricmp(appname(),"/DOOM.RUN")?".WAD":!stricmp(appname(),"/BROWSER.RUN")?".HTM;.HTML;.TXT":0;if(!file_dialog(filter,p,sizeof(p))){strcpy(openpath,p);opening=1;print("File selected: ");print(p);print("\n");}}else if(row==1)closing=1;}
+    if(menu==1){if(row==0){char p[256];const char*filter=!stricmp(appname(),"/NES.RUN")?".NES":!stricmp(appname(),"/PLAYER.RUN")?".MP3;.MID;.MIDI;.WAV;.MPG;.MPEG;.M2V;.VOB;.CUE":!stricmp(appname(),"/IMAGE.RUN")?".BMP;.PNG":!stricmp(appname(),"/DOOM.RUN")?".WAD":!stricmp(appname(),"/BROWSER.RUN")?".HTM;.HTML;.TXT":0;if(!file_dialog(filter,p,sizeof(p))){strcpy(openpath,p);opening=1;print("File selected: ");print(p);print("\n");}}else if(row==1)closing=1;}
     else if(menu==2){if(row==0)app_fullscreen(-1);else if(row==1){char p[256];if(!file_dialog(".PSF",p,sizeof(p))&&font_load(p))print("FONT: invalid PSF1 font\n");}else if(row==2)font_reset();else if(row==3)audio_mute(!audio_is_muted());else if(row==4){char p[256];if(!file_dialog(".MP3;.MID;.MIDI",p,sizeof(p))&&music_play(p,1))print("AUDIO: cannot play file\n");}else if(row==5)music_stop();}
     else if(menu==3)print("BDS app: Ctrl+F fullscreen | File and Options menus | F10/ESC app controls\n");menu=0;
 }
 void app_poll(void){
-    if(!current||full)return;int down=mouse_buttons&1,clicked=down&&!prev;prev=down;if(!clicked)return;
+    if(!current||full||captured)return;int down=mouse_buttons&1,clicked=down&&!prev;prev=down;if(!clicked)return;
     int x=mouse_x-xpos,y=mouse_y-ypos;
     if(y>=0&&y<26&&x>=cw-24&&x<cw){closing=1;return;}
     if(y>=28&&y<48){if(x>=8&&x<58)menu=menu==1?0:1;else if(x>=62&&x<134)menu=menu==2?0:2;else if(x>=138&&x<190)menu=menu==3?0:3;return;}
@@ -25,10 +39,10 @@ void app_poll(void){
 void app_present(void){
     if(!current)return;audio_pump();net_poll();app_poll();if(!shown){shown=1;serial("APP window frame ready\n");}
     if(!full){desktop_background();rect(xpos-4,ypos-4,cw+8,ch+56,0xc5c8c0);rect(xpos,ypos,cw,26,0x36594b);icon_draw(title,xpos+6,ypos+5,1);text(xpos+28,ypos+9,title,0xffffff);text(xpos+cw-18,ypos+9,"X",0xffffff);text(xpos+8,ypos+34,"File   Options   Help",0x17211d);}
-    int ox=full?0:xpos,oy=full?0:ypos+48,w=full?screen_w:cw,h=full?screen_h:ch;
+    int ox,oy,w,h;content_rect(&ox,&oy,&w,&h);if(full)rect(0,0,screen_w,screen_h,0);
     video_scaled(surface,800,600,ox,oy,w,h);
     if(!full&&menu){const char*file[]={"Open file...","Exit application"};const char*options[]={"Fullscreen  Ctrl+F","Load custom PSF font...","Use built-in font","Mute / unmute audio","Play MP3 / MIDI...","Stop music"};const char*help[]={"Show controls in Terminal"};const char**items=menu==1?file:menu==2?options:help;int n=menu==1?2:menu==2?6:1;rect(xpos+8,ypos+50,252,n*24,0xc5c8c0);for(int i=0;i<n;i++)text(xpos+16,ypos+58+i*24,items[i],0x17211d);}
-    cursor_draw();present();
+    if(!captured)cursor_draw();present();
 }
 void app_blit(const u32*src,int w,int h){if(w<1||h<1||w>1024||h>768)return;int scale=800/w;if(600/h<scale)scale=600/h;if(scale<1)scale=1;int ox=(800-w*scale)/2,oy=(600-h*scale)/2;app_rect(0,0,800,600,0);for(int y=0;y<h;y++)for(int x=0;x<w;x++)app_rect(ox+x*scale,oy+y*scale,scale,scale,src[y*w+x]);app_present();}
 int app_key(int wait){int k;do{app_poll();if(closing){closing=0;return 27;}if(opening==1){opening=2;return KEY_OPEN;}k=key(0);if(!k&&wait){audio_pump();sleep(10);}}while(wait&&!k);return k;}

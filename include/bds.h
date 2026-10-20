@@ -19,6 +19,8 @@ typedef unsigned int usize;
 #define KEY_MENU 517
 #define KEY_OPEN 518
 #define KEY_ADDRESS 519
+typedef struct {u32 lba;u8 number,control;u16 reserved;} CdTrack;
+typedef struct {char model[41];u32 count,leadout;CdTrack tracks[99];} CdInfo;
 typedef struct {
     u32 version;
     void (*print)(const char*);
@@ -58,6 +60,21 @@ typedef struct {
     int (*http_get)(const char*,char*,u32);
     /* ABI v4: pointer position in the 800x600 application surface. */
     int (*pointer)(int*,int*);
+    /* ABI v5: directory entry (FsEntry), relative input and RTC services. */
+    int (*read_dir)(const char*,int,void*); /* 1 entry, 0 end, -1 error */
+    int (*mouse_capture)(int);
+    int (*mouse_relative)(int*,int*);
+    int (*modifiers)(void); /* shift=1, ctrl=2, alt=4 */
+    void (*date_time)(int*); /* year, month, day, hour, minute, second */
+    /* ABI v6: streaming media and legacy-IDE digital audio extraction. */
+    void (*surface_blit)(const u32*,int,int,int,int,int,int);
+    void (*viewport)(int*,int*);
+    int (*music_control)(int,int); /* 0 state, 1 pause(0/1), 2 elapsed ms */
+    int (*cd_count)(void);
+    int (*cd_info)(int,CdInfo*);
+    int (*cd_read)(int,u32,u32,void*); /* CD-DA sectors, 2352 bytes each */
+    void (*audio_pause)(int);
+    u32 (*audio_pending)(void); /* milliseconds of queued PCM, excluding hardware tail */
 } BdsApi;
 typedef struct __attribute__((packed)) {
     char magic[4];u16 version,arch;u32 code,bss,entry,memory,checksum,flags;

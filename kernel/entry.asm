@@ -16,6 +16,7 @@ extern kmain
 _start:
     cli
     mov esp,stack_top
+    sub esp,8 ; i386 C ABI: 16-byte alignment immediately before CALL
     push ebx
     push eax
     call kmain
@@ -42,9 +43,24 @@ irq_timer:
     popad
     iretd
 fault:
+    push dword 0
+    push dword 255
+fault_common:
     cli
+    cld
+    push esp
     call fault_c
     hlt
+%assign vector 0
+%rep 32
+fault_%+vector:
+%if vector != 8 && vector != 10 && vector != 11 && vector != 12 && vector != 13 && vector != 14 && vector != 17 && vector != 21 && vector != 29 && vector != 30
+    push dword 0
+%endif
+    push dword vector
+    jmp fault_common
+%assign vector vector+1
+%endrep
 call_app:
     push ebp
     push ebx
@@ -69,6 +85,13 @@ app_exit:
     mov esp,[saved_esp]
     jmp call_app.return
 section .rodata
+global fault_vectors
+fault_vectors:
+%assign vector 0
+%rep 32
+    dd fault_%+vector
+%assign vector vector+1
+%endrep
 align 8
 gdt: dq 0,0x00cf9a000000ffff,0x00cf92000000ffff
 gdt_ptr: dw 23
@@ -76,6 +99,7 @@ gdt_ptr: dw 23
 section .bss
 saved_esp: resd 1
 alignb 16
-resb 65536
+; Software-rendered native apps and nested filesystem/PNG calls share this stack.
+resb 262144
 stack_top:
 section .note.GNU-stack noalloc noexec nowrite progbits

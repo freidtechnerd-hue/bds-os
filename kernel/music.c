@@ -5,6 +5,8 @@ typedef struct{u32 pos,end,next;u8 running,done;}Track;
 typedef struct{u32 phase,step;int active,note,channel,velocity,program;}Voice;
 static Track tracks[64];static int trackn,kind,looping,owned,volume=80;
 static u8*song;static u32 songlen,time,next_mus,division,tempo,muspos,musend,fraction;
+static int paused;static u32 elapsed_samples;
+int music_control(int command,int value){if(command==0)return kind?(paused?2:1):0;if(command==1){paused=!!value;return paused;}if(command==2)return elapsed_samples/48;return -1;}
 static Voice voices[24];static u8 programs[16],volumes[16],musvel[16];static u32 steps[128];
 static u32 be32(const u8*p){return p[0]<<24|p[1]<<16|p[2]<<8|p[3];}
 static u32 be16(const u8*p){return p[0]<<8|p[1];}
@@ -32,7 +34,7 @@ static int mus_reset(void){
 static void mus_event(void){
     for(int limit=0;limit<256;limit++){if(muspos>=musend){kind=0;return;}u8 e=song[muspos++];int ch=e&15,type=e>>4&7;if(ch==15)ch=9;else if(ch>=9)ch++;if(type==6){if(looping){mus_reset();return;}kind=0;return;}if(muspos>=musend){kind=0;return;}u8 a=song[muspos++];if(type==0)note_off(ch,a&127);else if(type==1){if(a&128){if(muspos>=musend){kind=0;return;}musvel[ch]=song[muspos++];}note_on(ch,a&127,musvel[ch]&127);}else if(type==2){}else if(type==3){if(a==10||a==11)controller(ch,123,0);}else if(type==4){if(muspos>=musend){kind=0;return;}u8 b=song[muspos++];if(a==0)programs[ch]=b&127;else if(a==3)controller(ch,7,b&127);}else{kind=0;return;}if(e&128){u32 delta;if(variable(&muspos,musend,&delta)){kind=0;return;}next_mus+=delta;return;}}kind=0;
 }
-void music_stop(void){kind=0;if(owned&&song)dealloc(song);song=0;owned=0;reset_voices();}
+void music_stop(void){kind=paused=0;elapsed_samples=0;if(owned&&song)dealloc(song);song=0;owned=0;reset_voices();}
 void music_volume(int v){volume=v<0?0:v>127?127:v;}
 int music_memory(const void*bytes,u32 size,int loop){
     music_stop();if(!audio_available()||!bytes||size<4||size>16*1024*1024)return -1;song=(u8*)bytes;songlen=size;looping=loop;
@@ -44,7 +46,9 @@ bad:kind=0;song=0;return -1;
 int music_play(const char*path,int loop){int f=fs_find(path),n=fs_size(f);if(n<4||n>16*1024*1024||!audio_available())return -1;u8*data=alloc(n);if(!data)return -1;if(fs_read(f,0,data,n)!=n){dealloc(data);return -1;}if(music_memory(data,n,loop)){dealloc(data);return -1;}owned=1;return 0;}
 /* Tick accumulation uses a rational per-sample remainder, avoiding 64-bit division. */
 void music_mix(short*out,u32 frames){
+    if(paused)return;
     for(u32 i=0;i<frames&&kind;i++){
+        elapsed_samples++;
         if(kind==3){short s[2];if(mp3_sample(s)){if(looping&&!mp3_start(song,songlen)&&!mp3_sample(s)){}else{kind=0;break;}}out[i*2]=s[0]*volume/127;out[i*2+1]=s[1]*volume/127;continue;}
         if(kind==1){int alive=0;for(int t=0;t<trackn;t++){Track*tr=tracks+t;int limit=512;while(!tr->done&&tr->next<=time&&limit--)midi_event(tr);if(!limit)tr->done=1;if(!tr->done)alive=1;}if(!alive){if(looping){midi_reset();fraction=0;}else{kind=0;break;}}}
         else if(kind==2&&next_mus<=time)mus_event();

@@ -6,6 +6,10 @@
 #include "storage.h"
 typedef struct {u32 cluster,sector;u16 offset;u8 attr,lfn_count;u32 lfn_sector[20];u16 lfn_offset[20];} Location;
 static Location loc[128];
+/* Temporary cross-volume reads revisit the same immutable optical directory.
+   Explicit mounts still rescan, so changing a disc and reopening its drive
+   invalidates this cache. Never cache writable FAT metadata. */
+static Location iso_loc[128];static FsEntry iso_files[128];static int iso_cached=-1;
 static int vol,format,bits;static u32 fatcache_sector=0xffffffff,alloc_cursor=2,info_sector,backup_sector,free_hint=0xffffffff;static u8 fatcache[512];static u32 spc,reserved,fats,fatsz,rootsecs,rootbase,database,rootcluster,clusters,total;
 static int io(u32 s,void*b,int w){return volume_io(vol,s,b,w);}
 static u32 eoc(void){return bits==12?0xff8:bits==16?0xfff8:0xffffff8;}
@@ -54,11 +58,18 @@ static int scan_iso(u32 extent,u32 size,u32 parent,int depth){
             p+=len;
         }at=(sector+1)*2048;
     }
-    for(int i=0;i<128;i++)if(files[i].type==2&&files[i].parent==parent)if(scan_iso(loc[i].cluster,files[i].size,i+1,depth+1))return -1;return 0;
+    /* Hybrid movie DVDs can contain thousands of bonus/data files. Reserve
+       the bounded snapshot for VIDEO_TS before traversing unrelated trees. */
+    for(int pass=0;pass<2;pass++)for(int i=0;i<128;i++)if(files[i].type==2&&files[i].parent==parent){
+        int video=depth==0&&!stricmp(files[i].name,"VIDEO_TS");
+        if(video!=(pass==0))continue;
+        if(scan_iso(loc[i].cluster,files[i].size,i+1,depth+1))return -1;
+    }return 0;
 }
 int media_mount(int id){
+    iso_cached=-1;
     vol=id;format=volumes[id].type;fatcache_sector=0xffffffff;alloc_cursor=2;info_sector=backup_sector=0;free_hint=0xffffffff;memset(loc,0,sizeof(loc));u8 b[2048];
-    if(format==3){if(io(16,b,0)||*(u16*)(b+128)!=2048)return -1;return scan_iso(*(u32*)(b+158),*(u32*)(b+166),0,0);}
+    if(format==3){if(io(16,b,0)||*(u16*)(b+128)!=2048)return -1;int r=scan_iso(*(u32*)(b+158),*(u32*)(b+166),0,0);if(!r){memcpy(iso_loc,loc,sizeof(loc));memcpy(iso_files,files,sizeof(files));iso_cached=id;}return r;}
     if(io(0,b,0))return -1;spc=b[13];reserved=*(u16*)(b+14);fats=b[16];fatsz=*(u16*)(b+22);if(!fatsz)fatsz=*(u32*)(b+36);total=*(u16*)(b+19);if(!total)total=*(u32*)(b+32);
     rootsecs=((u32)*(u16*)(b+17)*32+511)/512;rootbase=reserved+fats*fatsz;database=rootbase+rootsecs;
     if(!spc||spc>128||!fatsz||!total||total>volumes[id].blocks||database>=total)return -1;
@@ -68,12 +79,23 @@ int media_mount(int id){
     if(bits==32){/* Mirror both FATs; active-FAT-only volumes are read-only here. */if(*(u16*)(b+40)&0x80)return -1;if(info_sector&&info_sector<reserved){u8 info[512];if(io(info_sector,info,0))return -1;if(*(u32*)info==0x41615252&&*(u32*)(info+484)==0x61417272&&*(u32*)(info+488)<=clusters)free_hint=*(u32*)(info+488);}}
     return scan_fat(rootcluster,0,0);
 }
+int media_visit(int id){if(iso_cached==id&&volumes[id].type==3){vol=id;format=3;memcpy(loc,iso_loc,sizeof(loc));memcpy(files,iso_files,sizeof(files));return 0;}return media_mount(id);}
 int media_read(int i,u32 off,void*out,u32 count){
     if(i<0||i>=128||files[i].type!=1)return -1;u32 size=files[i].size;if(off>=size)return 0;if(count>size-off)count=size-off;
     u8 b[2048];u32 done=0,c=loc[i].cluster,cs=spc*512;
     if(format==2){for(u32 skip=off/cs;skip;skip--){u32 n;if(!valid(c)||fatget(c,&n))return -1;c=n;}}
     while(done<count){u32 pos=off+done,n,s;
-        if(format==3){s=loc[i].cluster+pos/2048;n=2048-pos%2048;}
+        if(format==3){
+            s=loc[i].cluster+pos/2048;n=2048-pos%2048;
+            /* Stream aligned optical blocks in one firmware transfer instead
+               of entering real mode separately for every 2 KiB sector. */
+            if(!(pos%2048)&&count-done>=2048){
+                u32 blocks=(count-done)/2048;if(blocks>16)blocks=16;
+                Volume*v=volumes+vol;if(s>=v->blocks||blocks>v->blocks-s)return -1;
+                if(disk_io(v->drive,v->start+s,blocks,(u8*)out+done,0))return -1;
+                done+=blocks*2048;continue;
+            }
+        }
         else{if(!valid(c))return -1;s=database+(c-2)*spc+(pos%cs)/512;n=512-pos%512;}
         if(n>count-done)n=count-done;if(io(s,b,0))return -1;memcpy((u8*)out+done,b+pos%(format==3?2048:512),n);done+=n;
         if(format==2&&done<count&&(off+done)%cs==0){u32 next;if(fatget(c,&next))return -1;c=next;}

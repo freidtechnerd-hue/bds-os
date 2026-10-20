@@ -82,7 +82,8 @@ def no_serial_test():
         print('PASS absent COM1: desktop, mounted file listing, PS/2 input and theme change',flush=True)
     finally:v.close()
 def ui_test():
-    disk=ROOT/'build/ui-test.img';shutil.copyfile(ROOT/'build/data.img',disk);v=VM('ui',disk)
+    # User data may contain a saved display preference; use a reproducible fixture.
+    disk=ROOT/'build/ui-test.img';shutil.copyfile(ROOT/'build/seed.img',disk);v=VM('ui',disk)
     try:
         v.wait('DESKTOP ready');time.sleep(.5);before=v.capture('desktop').read_bytes()
         v.mouse(-300,-230);time.sleep(.3);v.mouse(down=True);time.sleep(.2);v.mouse(80,50);time.sleep(.3);v.mouse(down=False);time.sleep(.2);after=v.capture('mouse-drag').read_bytes();assert before!=after
@@ -96,7 +97,7 @@ def ui_test():
         v.command('CHECK','PASS: filesystem integrity');print('PASS desktop, native editor persistence, five game loops and exits',flush=True)
     finally:v.close()
 def doom_test():
-    disk=ROOT/'build/doom-test.img';shutil.copyfile(ROOT/'build/data.img',disk);v=VM('doom',disk)
+    disk=ROOT/'build/doom-test.img';shutil.copyfile(ROOT/'build/seed.img',disk);v=VM('doom',disk)
     try:
         v.wait('DESKTOP ready');v.command('RUN /DOOM.RUN -iwad /FREEDOOM1.WAD -nosound -warp 1 1','DOOM playable level active',180)
         v.wait('DOOM frame 100');v.capture('doom-level');v.key('up',900);v.wait('DOOM player moved');time.sleep(1);v.capture('doom-moved');v.key('f10');v.wait('DOOM exit to BDS-OS');v.wait('RUN returned: 0');v.command('VER','BDS-OS Ultimate 0.2');v.capture('doom-return');print('PASS DOOM native load, WAD, playable level, frames, movement, clean exit, fresh image boot',flush=True)

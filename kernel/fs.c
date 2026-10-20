@@ -26,7 +26,7 @@ int fs_check(void){
     }
     return 0;
 }
-int fs_mount(int id){
+static int mount_volume(int id,int temporary){
     if(id<0||id>=volume_count)return -1;
     FsEntry old[128];memcpy(old,files,sizeof(files));int oa=active,ok=kind,om=mounted,oc=cwd;u32 ob=disk_blocks;
     active=id;kind=volumes[id].type;cwd=0;mounted=0;memset(files,0,sizeof(files));
@@ -35,10 +35,11 @@ int fs_mount(int id){
         disk_blocks=*(u32*)(buf+8);if(disk_blocks>=1024&&disk_blocks<=0x1000000&&disk_blocks<=volumes[id].blocks&&*(u32*)(buf+12)==128){
             r=0;for(int i=0;i<16;i++)if(sector(i+1,(u8*)files+i*512,0))r=-1;mounted=1;if(fs_check())r=-1;
         }
-    }else if(kind!=1)r=media_mount(id);
+    }else if(kind!=1)r=temporary?media_visit(id):media_mount(id);
     if(r){memcpy(files,old,sizeof(files));active=oa;kind=ok;mounted=om;cwd=oc;disk_blocks=ob;if(om&&ok!=1){memset(files,0,sizeof(files));media_mount(oa);cwd=oc;}return -1;}
     mounted=1;return 0;
 }
+int fs_mount(int id){return mount_volume(id,0);}
 int fs_init(void){
     /* Prefer the boot disk's BDSFS partition; then any validated BDSFS. */
     for(int pass=0;pass<2;pass++)for(int i=0;i<volume_count;i++)if(volumes[i].type==1&&(pass||drives[volumes[i].drive].bios==boot_drive))if(!fs_mount(i)){fs_system_volume=i;return 0;}
@@ -107,8 +108,9 @@ int fs_qualify(int volume,const char*path,char*out,u32 cap){
     if(strlen(prefix)+strlen(dir)+strlen(path)+1>cap)return -1;
     strcpy(out,prefix);strcpy(out+strlen(out),dir);strcpy(out+strlen(out),path);return 0;
 }
-static int visit(int v){return v<0||v>=volume_count?-1:v==active?0:fs_mount(v);}
-static void restore(int v,int c){if(active!=v&&v>=0)fs_mount(v);cwd=c;}
+static int visit(int v){return v<0||v>=volume_count?-1:v==active?0:mount_volume(v,1);}
+static void restore(int v,int c){if(active!=v&&v>=0)mount_volume(v,1);cwd=c;}
+int fs_readdir(const char*path,int index,void*out){if(!path||!out||index<0)return -1;int old=active,c=cwd,v=path_volume(&path);if(visit(v))return -1;if(fs_cd(path)){restore(old,c);return -1;}int result=0;for(int i=0;i<128;i++)if(files[i].type&&files[i].parent==(u32)cwd){if(!index--){memcpy(out,files+i,sizeof(FsEntry));result=1;break;}}restore(old,c);return result;}
 int fs_find(const char*path){if(!path)return -1;int old=active,c=cwd,v=path_volume(&path);if(visit(v))return -1;int f=local_find(path);restore(old,c);return f<0?f:(v+1)*128+f;}
 int fs_type(int f){int old=active,c=cwd,v=f>=128?f/128-1:active;if(f<0||visit(v))return -1;int t=files[f%128].type;restore(old,c);return t;}
 int fs_size(int f){int old=active,c=cwd,v=f>=128?f/128-1:active;if(f<0||visit(v))return -1;int n=local_size(f%128);restore(old,c);return n;}

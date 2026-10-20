@@ -43,7 +43,9 @@ int bmp_draw(const char*path){
     u32 off=*(u32*)(b+10),dib=*(u32*)(b+14);int w=*(int*)(b+18),h=*(int*)(b+22);u16 bits=*(u16*)(b+28);
     if(b[0]!='B'||b[1]!='M'||dib<40||dib>(u32)n-14||off<14+dib||*(u16*)(b+26)!=1||*(u32*)(b+30)||(bits!=24&&bits!=32)||w<1||w>1024||!h||h<-768||h>768)goto done;
     int height=h<0?-h:h;u32 row=(w*(bits/8)+3)&~3u;if(off>(u32)n||row*height>(u32)n-off)goto done;
-    for(int y=0;y<screen_h;y++){u8*p=b+off+(h>0?height-1-y*height/screen_h:y*height/screen_h)*row;for(int x=0;x<screen_w;x++){u8*c=p+(x*w/screen_w)*(bits/8);rect(x,y,1,1,c[2]<<16|c[1]<<8|c[0]);}}r=0;
+    int dw=screen_w,dh=dw*height/w;if(dh>screen_h){dh=screen_h;dw=dh*w/height;}int ox=(screen_w-dw)/2,oy=(screen_h-dh)/2;
+    rect(0,0,screen_w,screen_h,0x17221c);
+    for(int y=0;y<dh;y++){u8*p=b+off+(h>0?height-1-y*height/dh:y*height/dh)*row;for(int x=0;x<dw;x++){u8*c=p+(x*w/dw)*(bits/8);rect(ox+x,oy+y,1,1,c[2]<<16|c[1]<<8|c[0]);}}r=0;
 done:dealloc(b);return r;
 }
 /* Compact persistent cache survives the native-app heap reset. */

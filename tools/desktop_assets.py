@@ -3,7 +3,7 @@ import pathlib,re,struct,sys,shutil
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 def generate():
     out=ROOT/'assets';(out/'icons').mkdir(parents=True,exist_ok=True);(out/'fonts').mkdir(exist_ok=True)
-    names=['TERMINAL','FILEMAN','EDITOR','SYSINFO','GAME','SETTINGS','ABOUT','HELLO','CALC','DOOM','NES','PLAYER','IMAGE','BROWSER','RUN','BIN','DLL','DCL','FOLDER','FONT','START','RESET','POWER']
+    names=['TERMINAL','FILEMAN','EDITOR','SYSINFO','GAME','SETTINGS','ABOUT','HELLO','CALC','DOOM','NES','CUBE','PLAYER','IMAGE','BROWSER','RUN','BIN','DLL','DCL','FOLDER','FONT','START','RESET','POWER']
     for name in names:
         pixels=[[0 for x in range(16)] for y in range(16)]
         def box(x,y,w,h,c):
@@ -14,6 +14,7 @@ def generate():
         elif name in ['TERMINAL','HELLO']:box(3,4,10,7,0xff18291e);box(4,5,2,1,0xff8ed7a2);box(5,6,2,1,0xff8ed7a2);box(4,7,2,1,0xff8ed7a2);box(8,9,3,1,0xff8ed7a2)
         elif name=='GAME':box(1,6,14,6,0xff798976);box(3,6,1,5,0xff26362b);box(1,8,5,1,0xff26362b);box(10,7,2,2,0xffc96143);box(12,9,2,2,0xffdfb74e)
         elif name=='NES':box(3,2,10,12,0xff929a8c);box(5,3,6,6,0xffe0d5b8);box(6,4,4,2,0xffbe5943);box(5,11,6,3,0xff26362b)
+        elif name=='CUBE':box(2,3,12,11,0xff795536);box(2,3,12,4,0xff68a447);box(3,7,2,2,0xff9a784e);box(8,10,3,2,0xff553b29);box(11,7,2,3,0xffb08b59)
         elif name=='DOOM':box(3,3,10,10,0xffb44e38);box(4,5,8,4,0xffd5dfcb);box(5,6,2,2,0xff26362b);box(9,6,2,2,0xff26362b);box(6,10,4,2,0xff26362b)
         elif name=='PLAYER':box(7,4,1,7,0xff3e7153);box(8,4,4,1,0xff3e7153);box(11,5,1,5,0xff3e7153);box(4,10,4,2,0xff3e7153);box(9,9,3,2,0xff3e7153)
         elif name=='IMAGE':box(3,3,10,10,0xff73b7dc);box(9,4,2,2,0xffffda7b);box(4,9,4,3,0xff50835f);box(7,8,5,4,0xff355b42)
@@ -32,7 +33,8 @@ def generate():
         bitmap=b''.join(struct.pack('<I',c) for row in reversed(pixels) for c in row)
         mask=b''.join(bytes([sum((128>>x) for x in range(8) if not row[x]),sum((128>>x) for x in range(8) if not row[8+x]),0,0]) for row in reversed(pixels))
         icon=struct.pack('<HHH',0,1,1)+struct.pack('<BBBBHHII',16,16,0,0,1,32,len(dib+bitmap+mask),22)+dib+bitmap+mask
-        (out/'icons'/f'{name}.ICO').write_bytes(icon)
+        iconpath=out/'icons'/f'{name}.ICO'
+        if not iconpath.exists() or iconpath.read_bytes()!=icon:iconpath.write_bytes(icon)
     font=(ROOT/'kernel/font8x8.h').read_text();rows=re.findall(r'\{([^{}]+)\}',font)
     glyphs=[]
     for row in rows:
@@ -59,10 +61,16 @@ def populate(disk):
     disk.put('/DATA/EXAMPLE.BIN',b'BDS binary companion data\0\x01\x02\x03')
     disk.put('/DATA/EXAMPLE.DLL',b'BDS companion data; not a Windows executable DLL.\n')
     disk.put('/DATA/EXAMPLE.DCL',b'caption=BDS example\nicon=/ICONS/RUN.ICO\n')
-    for source,name in [('docs/DESKTOP-UPGRADE.md','DESKTOP-UPGRADE.TXT'),('third_party/elk/LICENSE','ELK-NOTICE.TXT'),('licenses/AGPL-3.0.txt','AGPL-3.0.TXT'),('docs/DESKTOP-AUDIO.md','DESKTOP-AUDIO.TXT'),('docs/NETWORK-DESKTOP.md','NETWORK-DESKTOP.TXT'),('licenses/NOTICE.md','BDS-NOTICES.TXT'),('third_party/minimp3/LICENSE','MINIMP3-LICENSE.TXT'),('third_party/lwip/COPYING','LWIP-LICENSE.TXT'),('third_party/gumbo/COPYING','GUMBO-LICENSE.TXT'),('third_party/lodepng/LICENSE','LODEPNG-LICENSE.TXT')]:
+    for source,name in [('docs/MEDIA.md','MEDIA.TXT'),('third_party/libmpeg2/COPYING','LIBMPEG2-LICENSE.TXT'),('third_party/liba52/COPYING','LIBA52-LICENSE.TXT'),('third_party/pl_mpeg/LICENSE','PLMPEG-LICENSE.TXT'),('docs/DESKTOP-UPGRADE.md','DESKTOP-UPGRADE.TXT'),('third_party/elk/LICENSE','ELK-NOTICE.TXT'),('licenses/AGPL-3.0.txt','AGPL-3.0.TXT'),('docs/DESKTOP-AUDIO.md','DESKTOP-AUDIO.TXT'),('docs/NETWORK-DESKTOP.md','NETWORK-DESKTOP.TXT'),('licenses/NOTICE.md','BDS-NOTICES.TXT'),('third_party/minimp3/LICENSE','MINIMP3-LICENSE.TXT'),('third_party/lwip/COPYING','LWIP-LICENSE.TXT'),('third_party/gumbo/COPYING','GUMBO-LICENSE.TXT'),('third_party/lodepng/LICENSE','LODEPNG-LICENSE.TXT')]:
         disk.put('/DOCS/'+name,(ROOT/source).read_bytes())
     for source,name in [('GETTING-STARTED.md','INSTALL-GUIDE.TXT'),('CREDITS.md','PROJECT-CREDITS.TXT'),('CHANGELOG.md','CHANGELOG.TXT')]:
         disk.put('/DOCS/'+name,(ROOT/'docs'/source).read_bytes())
+    disk.put('/CLASSIC');disk.put('/CLASSIC/texpacks');disk.put('/CLASSIC/maps')
+    disk.put('/CLASSIC/texpacks/classicube.zip',(ROOT/'third_party/classicube/misc/cc_textures.zip').read_bytes())
+    disk.put('/DOCS/CLASSICUBE.TXT',(ROOT/'docs/CLASSICUBE.md').read_bytes())
+    disk.put('/DOCS/CLASSICUBE-LICENSE.TXT',(ROOT/'third_party/classicube/license.txt').read_bytes())
+    if disk.find('/CLASSIC/options.txt')<0:
+        disk.put('/CLASSIC/options.txt',b'defaulttexpack=classicube.zip\nviewdist=32\nfpslimit=Limit30FPS\nchat-logging=false\nmusicvolume=0\nsoundsvolume=0\n')
     disk.save();disk.check()
 if __name__=='__main__':
     generate()

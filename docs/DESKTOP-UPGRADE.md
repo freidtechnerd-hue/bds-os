@@ -18,13 +18,26 @@ Start > Restart [R] resets the machine, and Start > Power off [P] requests
 ACPI S5. Shell equivalents are REBOOT and POWEROFF. Unsupported ACPI firmware
 reports that automatic power off failed rather than claiming it succeeded.
 
-Use the GRUB boot menu to select 640×480, 800×600, 1024×768, 1280×720,
-1280×800, 1280×1024, 1366×768, 1440×900, 1600×900, 1920×1080 or 1920×1200.
-The firmware must offer the selected 32-bit RGB mode; otherwise GRUB falls
-back to 800×600. Settings shows the actual mode. Native apps keep an 800×600
-virtual drawing surface and scale when fullscreen. A reboot is required to
-change resolution. The persistent desktop canvas occupies reserved RAM at
-80–96 MiB, separate from the app, resettable heap and installer payload.
+Press **F6** for Settings. Click a resolution or use the arrow keys, then
+click **Apply** or press Enter. The display changes immediately. Click **Keep**
+or press Enter again within 15 seconds to save it; Escape, Revert, or the
+timeout restores the previous size. Only firmware-supported RGB32 sizes are
+listed. The preference is stored in `/DISPLAY.CFG` on the system volume,
+independently of the drive currently browsed in File Manager.
+
+Normal desktop and Game Center boots restore the saved size. For recovery,
+choose **Desktop 800x600 (ignore saved settings)** in GRUB. Explicit GRUB
+resolution entries also override the saved preference. Unsupported requested
+boot modes fall back to 800x600. Live switching needs a compatible VBE BIOS;
+otherwise Settings explains that the boot menu must be used. Physical GPU and
+monitor combinations remain untested. The preview timer requires the kernel
+to remain running; reboot to recovery if firmware hangs during a mode change.
+
+Native apps keep an 800x600 virtual drawing surface and scale proportionally when fullscreen, with centered borders.
+See [the tabbed Settings guide](SETTINGS.md) for modern modes and preferences.
+The persistent desktop canvas occupies reserved RAM at 80-112 MiB, separate
+from apps, the resettable heap and installer payload. No GPU acceleration or
+monitor EDID filtering is implemented.
 
 VirtualBox: power off, Settings > Network > Adapter 1 > NAT, Cable Connected,
 Intel PRO/1000 MT Desktop (82540EM) or PCnet-FAST III (Am79C973). Boot and run

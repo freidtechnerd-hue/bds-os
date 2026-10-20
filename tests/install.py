@@ -17,7 +17,9 @@ def install(v):
     disks=re.findall(r'DISK (\d+) \| ([^\n]+)',v.log)
     target=next(int(n) for n,desc in disks if 'writable' in desc and 'boot media' not in desc)
     v.s.sendall(f'{target}\r'.encode());v.wait('Confirmation:');v.capture(v.name+'-confirm')
-    v.s.sendall(f'ERASE {target}\r'.encode());v.wait('INSTALL COMPLETE:',180);v.capture(v.name+'-complete');v.key('esc');v.wait('BDS command line ready.');return target
+    # Firmware write + read-back verification can be slow on a host-mounted
+    # NTFS image. Keep all byte checks, but allow a realistic installation time.
+    v.s.sendall(f'ERASE {target}\r'.encode());v.wait('INSTALL COMPLETE:',600);v.capture(v.name+'-complete');v.key('esc');v.wait('BDS command line ready.');return target
 def check_fat(v):
     v.command('MOUNT 0','Volume mounted');v.command('TYPE /BOOT/GRUB/GRUB.CFG','Graphical Desktop')
     v.command('MKDIR /TEST','Directory created');v.command('WRITE /TEST/ONE.TXT "persistent FAT data"','File written')

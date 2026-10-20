@@ -12,7 +12,7 @@ may work with equivalent emulated devices, but have not been verified.
 
 | Setting | Recommended starting point | Limit or reason |
 | --- | --- | --- |
-| CPU | One x86 CPU | Native i386 apps; x87 is used by game/audio/browser code |
+| CPU | One x86 CPU with SSE2 | ClassiCube and Media Player need SSE2 |
 | RAM | 512 MiB | Installer minimum 256 MiB; installed OS tested with 128 MiB |
 | Target disk | New 1 GiB virtual disk | Minimum 81 MiB; BDSFS expands up to 8 GiB |
 | Firmware | Legacy BIOS | UEFI boot and Secure Boot are unsupported |
@@ -210,9 +210,11 @@ off and VBE modes vary, so start in a VM before choosing hardware.
   ext4 and GPT volumes cannot be mounted. FAT uses 8.3 aliases. See
   [storage limits](INSTALL.md#storage-access) before copying valuable files.
 - `.BIN`, `.DLL` and `.DCL` are companion **data**, not Windows libraries.
-- Choose the desired resolution in the installed GRUB boot menu. If firmware
-  cannot supply it, select 800×600. Ctrl+F changes app fullscreen, not the
-  physical screen mode.
+- Press **F6** for Settings, open the **Display** tab, select a resolution, then **Apply**. Confirm
+  **Keep** within 15 seconds or the old size returns. Kept settings survive
+  a normal desktop reboot when the system volume is writable. For recovery,
+  use **Desktop 800x600 (ignore saved settings)** in the installed GRUB menu.
+  Only supported RGB32 firmware modes appear. Ctrl+F changes app fullscreen.
 - Press **F10**, then **P** to power off or **R** to restart. Wait for writes
   to finish. On unsupported ACPI firmware, use the VM/physical power control
   after file activity has stopped.
@@ -221,6 +223,14 @@ To add ROMs, browse a boot-time attached FAT volume and copy files with the
 shell `COPY` command, or use [the offline import tools](NES.md). Never mount or edit
 the same image simultaneously from the guest and host. Public builds contain
 no commercial games; personal ROMs and saves should stay out of public forks.
+
+## Media playback and widescreen
+
+Open Media Player from the desktop or Start (F10, M). It plays MP3/MIDI,
+PCM WAV, MPEG-1/2, unencrypted DVD VOB titles and BIN/CUE audio-CD images.
+Use AC97 or Intel HDA sound, attach optical/data media before boot, and use
+F6 for available 16:9/16:10 screen sizes. See [MEDIA.md](MEDIA.md) for controls,
+VirtualBox custom video modes, supported formats and physical-drive limits.
 
 ## Troubleshooting
 
@@ -243,3 +253,15 @@ no commercial games; personal ROMs and saves should stay out of public forks.
 The technical [installer guide](INSTALL.md) explains the disk layout,
 integrity checks and firmware constraints. [Verification](VERIFIED.md) records
 test scope; successful VM checks are not a claim of universal hardware support.
+
+## ClassiCube
+
+Press F5 then C, or type `CUBE` in Terminal. WASD moves, Space jumps,
+mouse looks, left/right click removes/places blocks, Escape opens the menu,
+and F10 exits. Save worlds through Save level before exiting. Ctrl+F toggles
+fullscreen. See [ClassiCube controls and limitations](CLASSICUBE.md). This native
+software port currently supports offline single-player without game audio.
+Software-emulated QEMU can be slow; hardware-assisted VirtualBox is preferable.
+
+Display modes through 4K, proportional fullscreen, and persistent Colors,
+Fonts and Sounds preferences are explained in [Settings](SETTINGS.md).

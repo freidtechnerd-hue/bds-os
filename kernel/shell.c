@@ -9,7 +9,7 @@ static void two(int v){char s[3]={'0'+v/10,'0'+v%10,0};print(s);}
 static int parse(char*line,char**args){int n=0;char*s=line;while(*s&&n<12){while(*s==' ')s++;if(!*s)break;int quote=*s=='"';if(quote)s++;args[n++]=s;while(*s&&(quote?*s!='"':*s!=' '))s++;if(*s)*s++=0;}return n;}
 void shell_command(char*line){
     char*a[12];int n=parse(line,a);if(!n)return;char*c=a[0];
-    if(!stricmp(c,"HELP"))print("HELP VER CLS ECHO DIR CD PWD TYPE COPY MOVE DEL MKDIR RMDIR REN\nDATE TIME MEM SYSINFO RUN EDIT GAME DOOM NES IMAGE WEB NET PLAY FONT AUDIO DRIVES MOUNT REBOOT POWEROFF DESKTOP\nWRITE path \"text\" writes a file; CHECK validates disk metadata.\n.RUN apps: HELLO CALC EDITOR SYSINFO GAME DOOM NES PLAYER (i386 only).\nNES [path.nes] plays a cartridge or opens File Manager for a ROM.\nPaths support /, .. and quoted arguments. F1 opens desktop.\n");
+    if(!stricmp(c,"HELP"))print("HELP VER CLS ECHO DIR CD PWD TYPE COPY MOVE DEL MKDIR RMDIR REN\nDATE TIME MEM SYSINFO RUN EDIT GAME DOOM NES CUBE IMAGE WEB NET PLAY FONT AUDIO DRIVES MOUNT REBOOT POWEROFF DESKTOP\nWRITE path \"text\" writes a file; CHECK validates disk metadata.\n.RUN apps: HELLO CALC EDITOR SYSINFO GAME DOOM NES PLAYER (i386 only).\nNES [path.nes] plays a cartridge or opens File Manager for a ROM.\nPaths support /, .. and quoted arguments. F1 opens desktop.\n");
     else if(!stricmp(c,"DRIVES"))storage_list();
     else if(!stricmp(c,"MOUNT")&&n==2){if(fs_mount(atoi(a[1])))error();else{print("Volume mounted. Current root: /\n");fs_list();}}
     else if(!stricmp(c,"VER"))print("BDS-OS Ultimate 0.2 / i386 native kernel\n");
@@ -32,11 +32,12 @@ void shell_command(char*line){
     else if(!stricmp(c,"RUN")&&n>=2)run(a[1],n-1,a+1);
     else if(!stricmp(c,"EDIT")&&n==2){char*args[]={"EDITOR.RUN",a[1]};run_system("/EDITOR.RUN",2,args);}
     else if(!stricmp(c,"GAME")){if(n==1)print("GAME snake | pong | blocks | mines | arcade\nArrow keys, Space, R restart, ESC exit. Native GAME.RUN.\n");else{char*args[]={"GAME.RUN",a[1]};run_system("/GAME.RUN",2,args);}}
+    else if(!stricmp(c,"CUBE")){char*args[]={"CUBE.RUN",n>1?a[1]:0};run_system("/CUBE.RUN",n>1?2:1,args);}
     else if(!stricmp(c,"DOOM")){char*args[]={"DOOM.RUN","-iwad",n>1?a[1]:0};run_system("/DOOM.RUN",n>1?3:1,args);}
     else if(!stricmp(c,"IMAGE")&&n<=2){char*args[]={"IMAGE.RUN",n>1?a[1]:0};run_system("/IMAGE.RUN",n>1?2:1,args);}
     else if(!stricmp(c,"WEB")&&n<=2){char*args[]={"BROWSER.RUN",n>1?a[1]:0};run_system("/BROWSER.RUN",n>1?2:1,args);}
     else if(!stricmp(c,"NET")){char info[180];net_info(info,sizeof(info));print(info);print("\n");}
-    else if(!stricmp(c,"PLAY")&&n==2){char*args[]={"PLAYER.RUN",a[1]};run_system("/PLAYER.RUN",2,args);}
+    else if(!stricmp(c,"PLAY")||!stricmp(c,"MEDIA")){char*args[]={"PLAYER.RUN",n>1?a[1]:0};run_system("/PLAYER.RUN",n>1?2:1,args);}
     else if(!stricmp(c,"FONT")&&n==2){if(!stricmp(a[1],"DEFAULT")){font_reset();print("Built-in font restored\n");}else if(font_load(a[1]))print("FONT: invalid PSF1 font\n");else print("Custom font loaded\n");}
     else if(!stricmp(c,"AUDIO")){print(audio_available()?"AC'97 / HDA stereo PCM output available\n":"No supported audio controller detected\n");}
     else if(!stricmp(c,"NES")&&n<=2){char*args[]={"NES.RUN",n>1?a[1]:0};run_system("/NES.RUN",n>1?2:1,args);}

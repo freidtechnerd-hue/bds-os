@@ -25,10 +25,13 @@ boots without the USB stick or optical media.
 - Desktop, cloud wallpaper, custom cursor, three-second boot screen with
   progress bar, Start menu, and startup/system sounds.
 - Terminal, File Manager, editor, calculator, system information, five small
-  games, BMP/PNG viewer and MP3/MIDI player.
+  games, BMP/PNG viewer and a [Media Player](docs/MEDIA.md) for music, MPEG video,
+  unencrypted DVD titles and BIN/CUE audio CDs (SSE2 required).
 - Native DOOM with Freedoom, WAD picker, loading screen, music and effects;
   native InfoNES emulator with ROM picker and battery saves. Apps start in
   windows; **Ctrl+F** toggles fullscreen.
+- Native [ClassiCube](docs/CLASSICUBE.md) with software rendering, offline
+  single-player, world saves and mouse/keyboard controls (SSE2 CPU required).
 - HTTP browser compiled with Gumbo, lwIP and Elk: clickable address bar,
   links, basic CSS and limited JavaScript/DOM support. **HTTPS and modern
   web-app compatibility are not implemented.** This is not Firefox.
@@ -38,8 +41,9 @@ boots without the USB stick or optical media.
   ISO9660 reading. Drive browsing preserves system app resources.
 - Native `.RUN` files with embedded 16×16 icons, custom PSF1 fonts and
   companion BIN/DLL/DCL data. Windows DLL execution is not supported.
-- Start-menu restart/power off and boot-menu resolutions from 640×480 to
-  1920×1200, subject to firmware availability.
+- Start-menu restart/power off and Settings resolution selection from 640×480
+  to 3840×2160, including 16:9/16:10 widescreen, subject to firmware availability, with preview, automatic
+  revert, saved preferences and a GRUB recovery option.
 
 Public builds include Freedoom with its license and credits. **Commercial NES
 ROMs, commercial DOOM WADs, personal saves and private VM disks are excluded.**
@@ -96,6 +100,26 @@ game pickers use Left/Right or drive buttons to switch devices. Enter opens
 an entry and Backspace goes to its parent. **Ctrl+L** focuses the browser
 address field; Enter or Go navigates. **Ctrl+F** toggles app fullscreen.
 
+**F6 → Settings:** select a screen size, Apply, then Keep within 15 seconds.
+Escape or the timeout reverts it. Kept sizes are restored on normal desktop
+boots. Use GRUB’s **Desktop 800x600 (ignore saved settings)** to recover.
+
+[Display, Colors, Fonts and Sounds settings](docs/SETTINGS.md).
+
+![Settings resolution controls](docs/screenshots/widescreen-settings.png)
+
+![Widescreen choices in VirtualBox](docs/screenshots/widescreen-settings.png)
+
+**Media Player:** open its desktop icon or press F10, M. O opens a file,
+D lists unencrypted DVD titles, C checks for a legacy IDE audio CD, and
+Space pauses. BIN/CUE images work through the file picker. See the
+[format, controls and drive guide](docs/MEDIA.md); DVD menus and CSS-encrypted
+discs are not supported.
+
+![Downloaded public-domain recording playing from a BIN/CUE test disc](docs/screenshots/media-cd.png)
+
+![Native ClassiCube loading a saved world](docs/screenshots/classicube.png)
+
 Useful terminal commands:
 
 ```text
@@ -121,7 +145,10 @@ changing the shell drive. Apps run one at a time and return to the desktop.
 
 ```sh
 make test test-ui test-doom test-nes test-desktop test-storage
-make test-audio test-network test-internet test-upgrade test-resolutions
+make test-audio test-network test-internet test-upgrade test-resolutions test-display-settings
+make test-classicube
+# Requires host FFmpeg for original generated test fixtures:
+make test-media
 # Test the currently generated installer without rebuilding its data:
 python3 tests/install.py
 python3 tests/install_safety.py

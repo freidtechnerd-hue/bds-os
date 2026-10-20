@@ -3,7 +3,7 @@ CC := gcc
 LD := ld
 PY := python3
 CFLAGS := -m32 -std=gnu11 -O2 -ffreestanding -fno-pie -fno-stack-protector -fno-builtin -mno-sse -mno-mmx -msoft-float -Wall -Wextra -Wno-unused-parameter -Wno-misleading-indentation -Ikernel -Iinclude
-KERNEL_OBJS := $(BUILD)/bios.o $(addprefix $(BUILD)/kernel/,$(addsuffix .o,main lib hardware video assets appui audio hda sfx music mp3 storage media installer fs loader shell desktop power rtl8139 pcnet))
+KERNEL_OBJS := $(BUILD)/bios.o $(addprefix $(BUILD)/kernel/,$(addsuffix .o,main lib hardware video display settings assets appui audio cdrom hda sfx music mp3 storage media installer fs loader shell desktop power rtl8139 pcnet))
 LWIP_SRC := $(wildcard third_party/lwip/src/core/*.c third_party/lwip/src/core/ipv4/*.c) third_party/lwip/src/netif/ethernet.c
 LWIP_OBJS := $(patsubst third_party/lwip/src/%.c,$(BUILD)/lwip/%.o,$(LWIP_SRC))
 NETFLAGS := $(CFLAGS) -Ikernel/network/include -Ithird_party/lwip/src/include
@@ -11,7 +11,7 @@ KERNEL_OBJS += $(BUILD)/kernel/network.o $(LWIP_OBJS)
 APPS := hello calc editor sysinfo game player
 RUNS := $(addprefix $(BUILD)/apps/,$(addsuffix .run,$(APPS)))
 
-.PHONY: all legacy grub installer doom nes freedoom clean test test-ui test-doom test-nes test-install test-storage test-audio test-desktop test-network test-internet test-upgrade test-resolutions desktop-data run-legacy run-grub
+.PHONY: all legacy grub installer doom nes freedoom clean test test-ui test-doom test-nes test-install test-storage test-audio test-desktop test-network test-internet test-upgrade test-resolutions test-display-settings desktop-data run-legacy run-grub
 all: legacy grub
 $(BUILD):
 	mkdir -p $(BUILD)
@@ -66,12 +66,27 @@ $(BUILD)/apps/image.run: apps/image.c $(UTILITY_SRC) | $(BUILD)
 	$(PY) tools/build_utilities.py image
 $(BUILD)/apps/browser.run: apps/browser.c apps/browser_number.c $(UTILITY_SRC) | $(BUILD)
 	$(PY) tools/build_utilities.py browser
+MEDIA_SRC := $(wildcard media/*.c media/*.h third_party/libmpeg2/libmpeg2/*.c third_party/libmpeg2/libmpeg2/*.h third_party/libmpeg2/include/*.h third_party/liba52/liba52/*.c third_party/liba52/liba52/*.h third_party/liba52/include/*.h third_party/pl_mpeg/*.h)
+$(BUILD)/apps/player.run: $(MEDIA_SRC) tools/build_media.py tools/runpack.py doom/libc.c doom/include/libc.h include/bds.h apps/link.ld | $(BUILD)
+	$(PY) tools/build_media.py
+.PHONY: media test-media
+media: $(BUILD)/apps/player.run
+
+test-media: grub
+	$(PY) tests/media.py
 $(BUILD)/apps/nes.run: $(NES_SRC) tools/build_nes.py tools/runpack.py include/bds.h apps/link.ld | $(BUILD)
 	$(PY) tools/build_nes.py
 nes: $(BUILD)/apps/nes.run
+CLASSICUBE_SRC := $(wildcard third_party/classicube/src/*.c third_party/classicube/src/*.h classicube/*.c classicube/*.h)
+$(BUILD)/apps/cube.run: $(CLASSICUBE_SRC) doom/libc.c doom/include/libc.h tools/build_classicube.py tools/runpack.py include/bds.h apps/link.ld assets/icons/CUBE.ICO | $(BUILD)
+	$(PY) tools/build_classicube.py
+.PHONY: classicube test-classicube
+classicube: $(BUILD)/apps/cube.run
+test-classicube: grub
+	$(PY) tests/classicube.py
 freedoom:
 	$(PY) tools/freedoom.py
-$(BUILD)/seed.img: $(RUNS) $(BUILD)/apps/doom.run $(BUILD)/apps/nes.run $(BUILD)/apps/image.run $(BUILD)/apps/browser.run tools/disk.py tools/desktop_assets.py assets/BOOT.BMP assets/WALLPAPR.BMP assets/wallpaper-source.png assets/HOME.HTM assets/DEMO.MP3 docs/DESKTOP-AUDIO.md docs/NETWORK-DESKTOP.md docs/DESKTOP-UPGRADE.md docs/GETTING-STARTED.md docs/CREDITS.md docs/CHANGELOG.md licenses/NOTICE.md licenses/AGPL-3.0.txt
+$(BUILD)/seed.img: $(RUNS) $(BUILD)/apps/doom.run $(BUILD)/apps/nes.run $(BUILD)/apps/cube.run $(BUILD)/apps/image.run $(BUILD)/apps/browser.run tools/disk.py tools/desktop_assets.py assets/BOOT.BMP assets/WALLPAPR.BMP assets/wallpaper-source.png assets/HOME.HTM assets/DEMO.MP3 docs/MEDIA.md third_party/libmpeg2/COPYING third_party/liba52/COPYING third_party/pl_mpeg/LICENSE docs/DESKTOP-AUDIO.md docs/NETWORK-DESKTOP.md docs/DESKTOP-UPGRADE.md docs/GETTING-STARTED.md docs/CREDITS.md docs/CHANGELOG.md licenses/NOTICE.md licenses/AGPL-3.0.txt docs/CLASSICUBE.md third_party/classicube/misc/cc_textures.zip
 	$(PY) tools/disk.py create $@
 $(BUILD)/data.img: | $(BUILD)/seed.img
 	cp $(BUILD)/seed.img $@
@@ -95,6 +110,11 @@ test-upgrade: grub
 	$(CC) -O2 -Ithird_party/elk tests/elk_limits.c third_party/elk/elk.c -o $(BUILD)/elk-limits
 	$(BUILD)/elk-limits
 	$(PY) tests/desktop_upgrade.py
+test-display-settings: grub
+	$(PY) tests/display_settings.py
+.PHONY: test-settings-tabs
+test-settings-tabs: grub
+	$(PY) tests/settings_tabs.py
 test-resolutions: grub
 	$(PY) tests/resolutions.py
 desktop-data: grub

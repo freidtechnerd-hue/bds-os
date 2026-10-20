@@ -1,4 +1,4 @@
-import pathlib, subprocess, time, shutil, sys
+import pathlib, subprocess, time, shutil, sys, threading
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'tools'))
 from disk import Disk
@@ -11,11 +11,31 @@ d.put('/BAD.RUN',bad);bad[6]=2;bad[-1]^=1;d.put('/BADSUM.RUN',bad);d.save()
 def boot(name,args,inputs,expected):
     log=ROOT/f'build/logs/{name}.log'
     p=subprocess.Popen(['qemu-system-i386','-m','128','-display','none','-serial','stdio','-monitor','none','-no-reboot']+args,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+    chunks=[]
+    def collect():
+        while True:
+            data=p.stdout.read1(65536)
+            if not data:return
+            chunks.append(data)
+    reader=threading.Thread(target=collect,daemon=True);reader.start()
+    def wait_for(markers,timeout=90,start=0):
+        end=time.monotonic()+timeout
+        while time.monotonic()<end:
+            out=b''.join(chunks).decode(errors='replace')
+            if all(marker in out[start:] for marker in markers):return
+            if p.poll() is not None:break
+            time.sleep(.1)
+        raise AssertionError((name,markers,out))
     try:
-        time.sleep(6)
+        if name=='legacy':time.sleep(6)
+        else:wait_for(['DESKTOP ready'])
         for data in inputs:
+            start=len(b''.join(chunks).decode(errors='replace'))
             p.stdin.write(data.encode());p.stdin.flush();time.sleep(max(1.5,len(data)*.07))
-        p.terminate(); out=p.communicate(timeout=5)[0].decode(errors='replace')
+            # The loader drains input on app exit. Wait for the real return
+            # before sending the next command, even on a busy host.
+            if name!='legacy' and data.startswith('RUN ') and 'BAD' not in data:wait_for(['RUN returned:'],start=start)
+        wait_for(expected);p.terminate();p.wait(timeout=5);reader.join(timeout=5);out=b''.join(chunks).decode(errors='replace')
     finally:
         if p.poll() is None:p.kill()
     log.write_text(out)

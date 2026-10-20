@@ -3,11 +3,24 @@
 bits 32
 section .text
 global bios_thunk_start,bios_thunk_end
+extern hardware_fxsr
 %define LOW(x) (0x6000+x-bios_thunk_start)
 bios_thunk_start:
     pushfd
     cli
     pushad
+    ; Firmware has no C ABI guarantee for application x87/SSE registers.
+    sub esp,528
+    lea eax,[esp+15]
+    and eax,-16
+    cmp dword [hardware_fxsr],0
+    je .save_x87
+    fxsave [eax]
+    fninit
+    jmp .saved
+.save_x87:
+    fnsave [eax]
+.saved:
     mov [0x7100],esp
     sgdt [0x7110]
     sidt [0x7118]
@@ -52,9 +65,20 @@ real:
     mov ax,[0x7000]
     mov dx,[0x7002]
     mov si,0x7200
+    cmp word [0x7008],0x10
+    je video_call
     sti
     int 0x13
+    jmp firmware_done
+video_call:
+    mov bx,[0x700a]
+    mov cx,[0x700c]
+    mov di,0x7400
+    sti
+    int 0x10
+firmware_done:
     cli
+    mov [cs:0x700e],bx
     pushf
     pop bx
     mov cx,ax
@@ -98,6 +122,16 @@ back:
     mov al,0xff
     out 0xa1,al
     cld
+    lea eax,[esp+15]
+    and eax,-16
+    cmp dword [hardware_fxsr],0
+    je .restore_x87
+    fxrstor [eax]
+    jmp .restored
+.restore_x87:
+    frstor [eax]
+.restored:
+    add esp,528
     popad
     popfd
     ret

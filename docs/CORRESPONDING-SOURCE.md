@@ -7,7 +7,7 @@ Pinned revisions and modifications are recorded in each upstream directory
 and [licenses/NOTICE.md](../licenses/NOTICE.md).
 
 The public ISO includes GRUB boot components generated using Ubuntu's
-`grub-common` and `grub-pc-bin` packages. The October 12 build uses
+`grub-common` and `grub-pc-bin` packages. The October 12 through October 19 builds use
 **2.14-2ubuntu2**. Matching upstream source, Ubuntu patches and packaging are
 distributed beside the ISO in a GRUB source archive. The BDS change to the
 generated MBR is fully specified by `tools/installer.py`, which assembles

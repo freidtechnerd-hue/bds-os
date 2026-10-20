@@ -92,6 +92,21 @@ mutations require reopening handles; there is no POSIX open-file identity.
 File/Open in DOOM returns internal status 42 with a pending selection; the
 loader unloads and freshly reloads DOOM with the new IWAD.
 
+### API versions 5 and 6
+
+Version 5 appends directory enumeration, relative mouse/capture, modifier keys
+and RTC date/time. ClassiCube uses these services. See include/bds.h for exact
+signatures and return types.
+
+Version 6 appends scaled RGB surface drawing (without presenting), actual
+client viewport dimensions, music state/pause/elapsed time, read-only legacy
+IDE CD enumeration/TOC/CD-DA sector reads, PCM pause and queued PCM duration.
+`audio_pending()` returns milliseconds in the software ring, excluding the
+short hardware DMA tail. `cd_read` accepts 1–16 sectors of 2352 bytes each;
+callers supply the destination capacity. CD APIs return negative on failure.
+These services are trusted ring-0 calls, not a security boundary. Media Player
+requires API 6 and SSE2; older apps retain their original function offsets.
+
 ## Architecture 1
 
 The **whole file including header** is placed at segment 0x2000 offset 0; code begins at offset 32. Assemble with `cpu 8086`, `bits 16`, `org 0`. Entry offset is still relative to payload, so the actual far-call target is 0x2000:(32+entry). DS/ES are 0x2000, SS remains the kernel stack. Use BIOS services or explicitly documented direct hardware, then RETF. Preserve SS/SP and return-frame integrity. There is no function-table ABI on this edition.

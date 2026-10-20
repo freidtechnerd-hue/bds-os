@@ -21,3 +21,9 @@ beside public installer assets. See [corresponding source and rebuilding](../doc
 No proprietary commercial DOOM IWAD is bundled. Freedoom data is included with its license and credits. Emulator screenshots in the test logs were captured from the real native framebuffer during tests.
 
 - **Elk 3.0**: Cesanta Software Limited, https://github.com/cesanta/elk at 71a86fa2fef146696be9ae66715bf3f91d0a5f2c. AGPL-3.0 license and notices retained in third_party/elk and licenses/AGPL-3.0.txt. BDS modifications add execution/call limits, a DOM property getter and a freestanding numeric conversion shim. Complete browser source and build scripts accompany the source archive; no commercial license is asserted.
+
+- **ClassiCube 1.3.8**: UnknownShadow200 and contributors, pinned to `33891a4e7e586941240261bc911312f228be57d3` from https://github.com/ClassiCube/ClassiCube. BSD-3-Clause and additional source notices retained in `third_party/classicube/license.txt`. The upstream ClassiCube texture pack is included; Minecraft default.zip is not downloaded. Native adapters are in `classicube/`; shared BDS runtime/adapters remain GPL-2.0-or-later. The combined binary and full corresponding sources are supplied under those compatible terms. This port does not imply upstream endorsement.
+
+- **libmpeg2 0.5.1**: MPEG Software Simulation Group and named contributors. GPL-2.0-or-later; upstream COPYING and provenance in `third_party/libmpeg2/`. Portable C decoder compiled into Media Player.
+- **liba52 0.7.4**: Aaron Holtzman, Michel Lespinasse and named contributors. GPL-2.0-or-later; COPYING and provenance in `third_party/liba52/`. AC-3 decoder compiled into Media Player.
+- **pl_mpeg**: Dominic Szablewski and contributors. MIT license in `third_party/pl_mpeg/LICENSE`; pinned commit in UPSTREAM.md. Used for MPEG Layer II audio.
