@@ -197,10 +197,9 @@ off and VBE modes vary, so start in a VM before choosing hardware.
   independent drive selection; desktop icons/apps stay on the system disk.
 - Type `NET` to inspect NIC, link, DHCP address, gateway and DNS. With NAT and
   a connected cable, DHCP should provide an address automatically.
-- Press **F9**. Click the address bar or press **Ctrl+L**, enter a full HTTP
+- Press **F9**. Click the address bar or press **Ctrl+L**, enter a full HTTP/HTTPS
   URL (for example `http://neverssl.com/`), then press Enter or click **Go**.
-  Bare hostnames are given an `http://` prefix. Some websites redirect to
-  HTTPS and cannot load. Simple early-web-style pages work within the
+  Bare hostnames are given an `http://` prefix. HTTPS redirects work when the CPU exposes RDRAND and the UTC clock is valid. Simple early-web-style pages work within the
   [documented HTML/CSS/JS limits](NETWORK-DESKTOP.md); age alone does not
   determine compatibility. Local HTM files also work.
 - Press **F5**, then **D** for the DOOM WAD picker or **N** for the NES ROM
@@ -245,7 +244,7 @@ VirtualBox custom video modes, supported formats and physical-drive limits.
 | Network adapter not found | Match a listed PCI model; disable unsupported alternative NICs |
 | No DHCP or cable disconnected | NAT enabled, Cable Connected on, host connectivity working |
 | Page stays local | Focus address with Ctrl+L, enter URL, then Enter/Go; read the bottom status |
-| HTTPS error / page looks plain | Browser supports HTTP and a small CSS/JS subset; use a simpler page |
+| HTTPS error / page looks plain | Check RDRAND support and UTC clock; HTTPS works but layout/CSS/JS support remains limited. See [HTTPS](HTTPS.md). |
 | No sound | AC'97/HDA selected, host output enabled, `AUDIO` detects hardware |
 | Black screen at a new size | Reboot, choose 800×600; firmware may lack the requested RGB32 mode |
 | Old files after rebuilding | `data.img`/VDI are preserved copies; refresh offline and rebuild installer |

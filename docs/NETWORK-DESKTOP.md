@@ -1,3 +1,7 @@
+> October 21: native certificate-validated HTTPS is now available. See
+> [HTTPS requirements and limitations](HTTPS.md). Wikipedia loads in simplified
+> text layout; full PC rendering compatibility has not been implemented.
+
 # Cloud desktop, images and Ethernet
 
 The supplied 200×150 cloud image is the default wallpaper. `/WALLPAPR.BMP`
@@ -81,7 +85,7 @@ switches fullscreen. ESC exits or cancels address entry/network fetch.
 
 HTTP/1.x GET, IPv4 literals/domains, explicit ports, up to five requests in a
 redirect chain, chunked responses, HTML entities and relative links are
-supported. Limits: 248-character entered URL, 64 KiB response, 2048 text lines,
+supported. Limits: 248-character entered URL, 2 MiB response, 4096 text lines,
 64 links, 128 rendering levels. Pictures show alternate text. Status reports
 HTTP errors, truncation and network failures. DHCP/DNS waits cap at 15 seconds
 each; the TCP request caps at 20 seconds. A new navigation clears the old
@@ -111,7 +115,7 @@ references, 8 KiB written HTML. Script errors leave navigation usable.
 Simple HTTP sites, including many early-web pages, can display text and links
 with this subset. A site being from the 1990s does not guarantee compatibility:
 its current server may require HTTPS or features outside this browser.
-HTTPS/TLS, forms, cookies, downloads, compression and history remain
+Forms, cookies, downloads, compression and history remain
 unsupported. Apps/parsers run at kernel privilege without process isolation.
 
 ## Pinned source and specifications

@@ -16,3 +16,6 @@ __pycache__/
 *.img
 .env
 .env.*
+
+third_party/bearssl/.git/
+third_party/bearssl/build/

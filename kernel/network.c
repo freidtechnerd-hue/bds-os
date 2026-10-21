@@ -1,4 +1,5 @@
 #include "os.h"
+#include "tls.h"
 #include "lwip/init.h"
 #include "lwip/netif.h"
 #include "netif/ethernet.h"
@@ -60,29 +61,42 @@ int net_info(char*out,u32 cap){
     if(ready&&!fault&&netif_is_link_up(&nic)&&!ip4_addr_isany_val(*netif_ip4_addr(&nic))){strcpy(s+strlen(s),ip4addr_ntoa(netif_ip4_addr(&nic)));strcpy(s+strlen(s)," gateway ");strcpy(s+strlen(s),ip4addr_ntoa(netif_ip4_gw(&nic)));}
     if(!out||cap<=strlen(s))return -1;strcpy(out,s);return ready&&!fault&&netif_is_link_up(&nic)&&!ip4_addr_isany_val(*netif_ip4_addr(&nic));
 }
-typedef struct{struct tcp_pcb*pcb;char*out;u32 cap,used,token;int done,error,resolved;ip_addr_t address;char request[1600];}Fetch;
+typedef struct{struct tcp_pcb*pcb;char*out;u32 cap,used,token;int done,error,resolved,secure,connected,eof;ip_addr_t address;char request[1600];}Fetch;
 static Fetch fetch;static u32 token;
+static u8 tls_rx[32768];static u32 tls_head,tls_used;
+static int tls_send(const void*data,unsigned n){if(!fetch.pcb)return -4;unsigned room=tcp_sndbuf(fetch.pcb);if(n>room)n=room;if(n>1460)n=1460;if(!n)return 0;err_t r=tcp_write(fetch.pcb,data,n,TCP_WRITE_FLAG_COPY);if(r==ERR_MEM)return 0;if(r!=ERR_OK)return -4;tcp_output(fetch.pcb);return n;}
+static int tls_receive(void*data,unsigned n){if(n>tls_used)n=tls_used;if(!n)return fetch.eof?-7:0;for(unsigned i=0;i<n;i++)((u8*)data)[i]=tls_rx[(tls_head+i)%sizeof(tls_rx)];tls_head=(tls_head+n)%sizeof(tls_rx);tls_used-=n;return n;}
+static int tls_plain(const void*data,unsigned n){if(n>fetch.cap-1-fetch.used)return -5;memcpy(fetch.out+fetch.used,data,n);fetch.used+=n;fetch.out[fetch.used]=0;return n;}
+
 static void resolved(const char*name,const ip_addr_t*addr,void*arg){if((u32)arg!=fetch.token)return;fetch.resolved=1;if(addr)fetch.address=*addr;else fetch.error=-3;}
 static void tcp_error(void*arg,err_t error){fetch.pcb=0;fetch.error=-4;fetch.done=1;}
 static err_t receive(void*arg,struct tcp_pcb*p,struct pbuf*b,err_t error){
-    if(!b){fetch.done=1;return ERR_OK;}if(b->tot_len>fetch.cap-1-fetch.used){pbuf_free(b);fetch.error=-5;fetch.done=1;return ERR_OK;}
+    if(!b){if(fetch.secure)fetch.eof=1;else fetch.done=1;return ERR_OK;}
+    if(fetch.secure){if(b->tot_len>sizeof(tls_rx)-tls_used)return ERR_MEM;
+        for(struct pbuf*q=b;q;q=q->next)for(unsigned i=0;i<q->len;i++)tls_rx[(tls_head+tls_used++)%sizeof(tls_rx)]=((u8*)q->payload)[i];
+        tcp_recved(p,b->tot_len);pbuf_free(b);return ERR_OK;}
+    if(b->tot_len>fetch.cap-1-fetch.used){pbuf_free(b);fetch.error=-5;fetch.done=1;return ERR_OK;}
     pbuf_copy_partial(b,fetch.out+fetch.used,b->tot_len,0);fetch.used+=b->tot_len;fetch.out[fetch.used]=0;tcp_recved(p,b->tot_len);pbuf_free(b);return ERR_OK;
 }
-static err_t connected(void*arg,struct tcp_pcb*p,err_t error){if(error){fetch.error=-4;fetch.done=1;return error;}tcp_recv(p,receive);if(tcp_write(p,fetch.request,strlen(fetch.request),TCP_WRITE_FLAG_COPY)!=ERR_OK){fetch.error=-4;fetch.done=1;return ERR_OK;}tcp_output(p);return ERR_OK;}
+static err_t connected(void*arg,struct tcp_pcb*p,err_t error){if(error){fetch.error=-4;fetch.done=1;return error;}tcp_recv(p,receive);fetch.connected=1;if(fetch.secure)return ERR_OK;if(tcp_write(p,fetch.request,strlen(fetch.request),TCP_WRITE_FLAG_COPY)!=ERR_OK){fetch.error=-4;fetch.done=1;return ERR_OK;}tcp_output(p);return ERR_OK;}
 static int service(u32 end){net_poll();audio_pump();input_poll();if(key(0)==27)return -6;if((int)(ticks()-end)>=0)return -4;sleep(10);return 0;}
 int http_get(const char*url,char*out,u32 cap){
-    if(!url||!out||cap<1024||cap>1024*1024)return -2;if(strncmp(url,"http://",7))return -2;if(strlen(url)>1000)return -2;
-    const char*p=url+7;char host[254],authority[270],path[1024];int n=0;while(*p&&*p!='/'&&*p!=':'&&*p!='?'&&*p!='#'){if(n>=253||(u8)*p<=32||*p=='@')return -2;host[n++]=*p++;}host[n]=0;if(!n)return -2;
-    int port=80;if(*p==':'){p++;port=0;if(*p<'0'||*p>'9')return -2;while(*p>='0'&&*p<='9'){port=port*10+*p++-'0';if(port>65535)return -2;}if(!port)return -2;}
+    if(!url||!out||cap<1024||cap>4*1024*1024)return -2;int secure=!strncmp(url,"https://",8);int scheme=secure?8:7;if(!secure&&strncmp(url,"http://",7))return -2;if(strlen(url)>1000)return -2;
+    const char*p=url+scheme;char host[254],authority[270],path[1024];int n=0;while(*p&&*p!='/'&&*p!=':'&&*p!='?'&&*p!='#'){if(n>=253||(u8)*p<=32||*p=='@')return -2;host[n++]=*p++;}host[n]=0;if(!n)return -2;
+    int port=secure?443:80;if(*p==':'){p++;port=0;if(*p<'0'||*p>'9')return -2;while(*p>='0'&&*p<='9'){port=port*10+*p++-'0';if(port>65535)return -2;}if(!port)return -2;}
     const char*pathstart=p;strcpy(path,*p=='/'?p:"/");if(*p=='?')strcpy(path+1,p);for(int i=0;path[i];i++)if((u8)path[i]<32||path[i]==' ')return -2;
-    if(*p&&*p!='/'&&*p!='?'&&*p!='#')return -2;int authoritylen=pathstart-(url+7);if(authoritylen>=270)return -2;memcpy(authority,url+7,authoritylen);authority[authoritylen]=0;
+    if(*p&&*p!='/'&&*p!='?'&&*p!='#')return -2;int authoritylen=pathstart-(url+scheme);if(authoritylen>=270)return -2;memcpy(authority,url+scheme,authoritylen);authority[authoritylen]=0;
     for(int i=0;path[i];i++)if(path[i]=='#'){path[i]=0;break;}
     if(!ready||fault||!netif_is_link_up(&nic))return -1;u32 end=ticks()+15000;while(ip4_addr_isany_val(*netif_ip4_addr(&nic))){int r=service(end);if(r)return r;}
-    memset(&fetch,0,sizeof(fetch));fetch.out=out;fetch.cap=cap;fetch.token=++token;out[0]=0;strcpy(fetch.request,"GET ");strcpy(fetch.request+4,path);strcpy(fetch.request+strlen(fetch.request)," HTTP/1.0\r\nHost: ");strcpy(fetch.request+strlen(fetch.request),authority);strcpy(fetch.request+strlen(fetch.request),"\r\nUser-Agent: BDS-Browser/1.0\r\nAccept: text/html,text/plain\r\nConnection: close\r\n\r\n");
+    memset(&fetch,0,sizeof(fetch));fetch.out=out;fetch.cap=cap;fetch.secure=secure;tls_head=tls_used=0;fetch.token=++token;out[0]=0;strcpy(fetch.request,"GET ");strcpy(fetch.request+4,path);strcpy(fetch.request+strlen(fetch.request)," HTTP/1.0\r\nHost: ");strcpy(fetch.request+strlen(fetch.request),authority);strcpy(fetch.request+strlen(fetch.request),"\r\nUser-Agent: BDS-Browser/1.0\r\nAccept: text/html,text/plain,*/*;q=0.5\r\nAccept-Encoding: identity\r\nConnection: close\r\n\r\n");
     err_t r=dns_gethostbyname(host,&fetch.address,resolved,(void*)fetch.token);if(r==ERR_OK)fetch.resolved=1;else if(r!=ERR_INPROGRESS)return -3;
     end=ticks()+15000;while(!fetch.resolved&&!fetch.error){int e=service(end);if(e){fetch.token=++token;return e;}}if(fetch.error)return fetch.error;
-    fetch.pcb=tcp_new();if(!fetch.pcb)return -4;tcp_err(fetch.pcb,tcp_error);r=tcp_connect(fetch.pcb,&fetch.address,port,connected);if(r!=ERR_OK){tcp_abort(fetch.pcb);fetch.pcb=0;return -4;}
-    end=ticks()+20000;while(!fetch.done&&!fetch.error){int e=service(end);if(e){fetch.error=e;break;}}
-    int result=fetch.error?fetch.error:(int)fetch.used;if(fetch.error){char n[16];number(n,fetch.used);serial("NET failed HTTP received bytes: ");serial(n);serial("\n");}if(fetch.pcb){struct tcp_pcb*p=fetch.pcb;tcp_arg(p,0);tcp_err(p,0);tcp_recv(p,0);if(fetch.error||tcp_close(p)!=ERR_OK)tcp_abort(p);fetch.pcb=0;}fetch.out=0;fetch.token=++token;
+    if(secure){int e=tls_start(host);if(e){tls_clear();return e;}}
+    fetch.pcb=tcp_new();if(!fetch.pcb){tls_clear();return -4;}tcp_err(fetch.pcb,tcp_error);r=tcp_connect(fetch.pcb,&fetch.address,port,connected);if(r!=ERR_OK){tcp_abort(fetch.pcb);fetch.pcb=0;tls_clear();return -4;}
+    end=ticks()+60000;while(!fetch.done&&!fetch.error){
+        if(secure&&fetch.connected){int r=tls_step(tls_send,tls_receive,tls_plain,fetch.request);if(r<0)fetch.error=r;else if(r>0)fetch.done=1;}
+        if(fetch.done||fetch.error)break;int e=service(end);if(e){fetch.error=e;break;}}
+
+    int result=fetch.error?fetch.error:(int)fetch.used;if(fetch.error){char n[16];number(n,fetch.used);serial("NET failed HTTP received bytes: ");serial(n);serial("\n");}if(fetch.pcb){struct tcp_pcb*p=fetch.pcb;tcp_arg(p,0);tcp_err(p,0);tcp_recv(p,0);if(fetch.error||tcp_close(p)!=ERR_OK)tcp_abort(p);fetch.pcb=0;}fetch.out=0;fetch.token=++token;tls_clear();memset(tls_rx,0,sizeof(tls_rx));
     return result;
 }

@@ -9,9 +9,11 @@ def png(ppm):
 def pixel(ppm,x,y):
     head,data=pathlib.Path(ppm).read_bytes().split(b'\n255\n',1);w=int(head.split()[1]);p=(y*w+x)*3;return data[p:p+3]
 class VM:
-    def __init__(self,name,disk,serial=True,iso=ROOT/"build/bds-os.iso",memory=128,extra=()):
+    def __init__(self,name,disk,serial=True,iso=ROOT/"build/bds-os.iso",memory=128,extra=(),auto_display=False):
+        extra=list(extra)
+        if '-vga' not in extra:extra=['-vga','std']+extra
         self.name=name;self.log='';base=f'/tmp/bds-{os.getpid()}-{name}';self.qpath=base+'-qmp';self.spath=base+'-serial'
-        self.p=subprocess.Popen(['qemu-system-i386','-m',str(memory)]+(['-cdrom',str(iso)] if iso else [])+(['-drive',f'file={disk},format=raw,if=ide,index=0'] if disk else [])+list(extra)+['-display','none','-qmp',f'unix:{self.qpath},server=on,wait=off','-serial',f'unix:{self.spath},server=on,wait=off' if serial else 'none','-no-reboot'],stderr=open(LOG/f'{name}-qemu.log','w'))
+        self.p=subprocess.Popen(['qemu-system-i386','-m',str(memory)]+(['-cdrom',str(iso)] if iso else [])+(['-drive',f'file={disk},format=raw,if=ide,index=0'] if disk else [])+([] if auto_display else ['-global','VGA.xres=800','-global','VGA.yres=600'])+list(extra)+['-display','none','-qmp',f'unix:{self.qpath},server=on,wait=off','-serial',f'unix:{self.spath},server=on,wait=off' if serial else 'none','-no-reboot'],stderr=open(LOG/f'{name}-qemu.log','w'))
         for _ in range(100):
             if pathlib.Path(self.qpath).exists() and (not serial or pathlib.Path(self.spath).exists()):break
             time.sleep(.05)

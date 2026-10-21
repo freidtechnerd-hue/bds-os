@@ -1,3 +1,8 @@
+> Latest update: **automatic monitor resolution, authored DVD menus/autoplay,
+> and native HTTPS**. See [release notes](docs/RELEASE-2026-10-21.md),
+> [display settings](docs/SETTINGS.md), [DVD controls](docs/MEDIA.md), and
+> [browser requirements/limits](docs/HTTPS.md).
+
 # BDS-OS Ultimate
 
 A bootable x86 hobby operating system created by **freidtechnerd-hue with
@@ -32,9 +37,9 @@ boots without the USB stick or optical media.
   windows; **Ctrl+F** toggles fullscreen.
 - Native [ClassiCube](docs/CLASSICUBE.md) with software rendering, offline
   single-player, world saves and mouse/keyboard controls (SSE2 CPU required).
-- HTTP browser compiled with Gumbo, lwIP and Elk: clickable address bar,
-  links, basic CSS and limited JavaScript/DOM support. **HTTPS and modern
-  web-app compatibility are not implemented.** This is not Firefox.
+- HTTP/HTTPS browser compiled with Gumbo, lwIP, BearSSL and Elk: clickable address bar,
+  links, basic CSS and limited JavaScript/DOM support. **Modern web-app and PC-layout compatibility remain incomplete.**
+  HTTPS requires RDRAND and a valid UTC clock; see [requirements](docs/HTTPS.md).
 - DHCP for selected Intel PRO/1000, Realtek RTL8139 and AMD PCnet adapters;
   AC'97 and basic analog HDA sound.
 - BIOS-discovered disks and boot-time USB storage; BDSFS/FAT12/16/32 read/write,
@@ -111,10 +116,10 @@ boots. Use GRUB’s **Desktop 800x600 (ignore saved settings)** to recover.
 ![Widescreen choices in VirtualBox](docs/screenshots/widescreen-settings.png)
 
 **Media Player:** open its desktop icon or press F10, M. O opens a file,
-D lists unencrypted DVD titles, C checks for a legacy IDE audio CD, and
+D starts an unencrypted DVD with its authored menus, C checks for a legacy IDE audio CD, and
 Space pauses. BIN/CUE images work through the file picker. See the
-[format, controls and drive guide](docs/MEDIA.md); DVD menus and CSS-encrypted
-discs are not supported.
+[format, controls and drive guide](docs/MEDIA.md). CSS-encrypted discs and
+subtitle/SPU overlays are not supported.
 
 ![Downloaded public-domain recording playing from a BIN/CUE test disc](docs/screenshots/media-cd.png)
 
@@ -171,3 +176,8 @@ Original BDS code is **GPL-2.0-or-later**; see [COPYING](COPYING).
 The combined NES executable is GPL-3.0 and the combined Elk browser is
 AGPL-3.0. Upstream notices, asset attribution and corresponding source
 information are in [licenses/NOTICE.md](licenses/NOTICE.md).
+
+![Authored DVD menu in BDS Media Player](docs/screenshots/dvd-menu.png)
+
+Big Buck Bunny DVD artwork: © 2008 Blender Foundation, CC BY 3.0.
+[Disc source and attribution](docs/MEDIA-TEST-SOURCES.md).

@@ -14,6 +14,11 @@ int bios_video(u16 command,u16 bx,u16 cx,u16*result){
     r[0]=command;r[1]=0;r[2]=1;r[4]=0x10;r[5]=bx;r[6]=cx;
     ((void(*)(void))0x6000)();if(result)*result=r[7];return r[3]==0x004f?0:-1;
 }
+int bios_edid(u16 block){
+    if(!bios_available)return -1;volatile u16*r=(u16*)0x7000;
+    r[0]=0x4f15;r[1]=block;r[2]=1;r[4]=0x10;r[5]=1;r[6]=0;
+    ((void(*)(void))0x6000)();return r[3]==0x004f?0:-1;
+}
 int disk_io(int id,u32 lba,u32 count,void*buf,int write){
     if(id<0||id>=drive_count||!count)return -1;Drive*d=drives+id;
     if(!bios_available||lba>=d->blocks||count>d->blocks-lba||(write&&d->readonly))return -1;

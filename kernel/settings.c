@@ -1,5 +1,5 @@
 #include "os.h"
-static int selected,previous=-1,tab,font_choice=1;static u32 deadline;static char status[96];
+static int selected,previous=-1,tab,font_choice=1,auto_preview;static u32 deadline;static char status[96];
 static const char*tabs[]={"Display","Colors","Fonts","Sounds"};
 int settings_pending(void){return previous>=0;}
 static int path(char*out,const char*name){return fs_qualify(fs_system_volume,name,out,256);}
@@ -27,7 +27,7 @@ void settings_draw(int x,int y){
         if(settings_pending()){
             control(x,y+220,140,"Keep [Enter]",1);control(x+156,y+220,140,"Revert [Esc]",0);
             strcpy(label,"Reverting in ");number(size,(deadline-ticks()+999)/1000);strcpy(label+strlen(label),size);strcpy(label+strlen(label)," seconds");text(x,y+258,label,0x7a312a);
-        }else{if(display_count)control(x,y+220,140,"Apply [Enter]",0);text(x,y+258,display_count?"Firmware-supported sizes only. Keep saves the size.":"Live switching unavailable; use the GRUB boot menu.",0x1b2922);}
+        }else{if(display_count){control(x,y+220,140,"Apply [Enter]",0);control(x+312,y+220,188,"Auto detect [U]",display_automatic());}text(x,y+258,display_count?"Firmware-supported sizes only. Keep saves the size.":"Live switching unavailable; use the GRUB boot menu.",0x1b2922);}
         text(x,y+310,"Fullscreen apps keep their shape, with borders if needed.",0x1b2922);
     }else if(tab==1){
         text(x,y+44,"Desktop colors / wallpaper",0x1b2922);control(x,y+76,240,"Cloud wallpaper [1]",!desktop_theme(-1));control(x+260,y+76,240,"Amber background [2]",desktop_theme(-1));
@@ -46,8 +46,9 @@ void settings_draw(int x,int y){
     text(x,y+284,status,0x1b2922);
 }
 static void revert(void){if(previous<0)return;int old=previous;previous=-1;if(display_set(old))strcpy(status,"Restore failed. Reboot using the GRUB recovery entry.");else{selected=old;strcpy(status,"Previous resolution restored. Saved setting unchanged.");serial("DISPLAY: preview reverted\n");}}
-static void apply(void){if(previous>=0||selected<0)return;int old=display_current();if(display_set(selected)){strcpy(status,"Firmware rejected this mode. Previous size retained.");return;}previous=old;deadline=ticks()+15000;strcpy(status,"Keep this resolution? It will revert unless confirmed.");serial("DISPLAY: preview started\n");}
-static void keep(void){if(previous<0)return;previous=-1;if(display_save())strcpy(status,"Kept for this session; system disk could not save it.");else strcpy(status,"Resolution kept and saved on the system disk.");serial("DISPLAY: preview kept\n");}
+static void apply(void){auto_preview=0;if(previous>=0||selected<0)return;int old=display_current();if(display_set(selected)){strcpy(status,"Firmware rejected this mode. Previous size retained.");return;}previous=old;deadline=ticks()+15000;strcpy(status,"Keep this resolution? It will revert unless confirmed.");serial("DISPLAY: preview started\n");}
+static void automatic_preview(void){selected=display_auto_index();apply();auto_preview=1;}
+static void keep(void){if(previous<0)return;previous=-1;if(auto_preview?display_auto_save():display_save())strcpy(status,"Kept for this session; system disk could not save it.");else strcpy(status,"Resolution kept and saved on the system disk.");serial("DISPLAY: preview kept\n");}
 void settings_poll(void){if(previous>=0&&(int)(ticks()-deadline)>=0)revert();}
 static void category(int i){tab=i;strcpy(status,"Tab changes category. Preferences save on the system disk.");serial("SETTINGS: tab ");serial(tabs[tab]);serial("\n");}
 static void choose_font(int choice){
@@ -61,7 +62,7 @@ void settings_key(int k){
     if(previous>=0){if(k==13||k=='k'||k=='K')keep();else if(k==27||k=='r'||k=='R')revert();return;}
     if(k==9){category((tab+1)%4);return;}if(k>='A'&&k<='Z')k+=32;
     if((tab==0||tab==1)&&(k=='1'||k=='2')){desktop_theme(k-'1');save();return;}
-    if(tab==0&&display_count){if(k==KEY_RIGHT||k==KEY_DOWN)selected=(selected+1)%display_count;else if(k==KEY_LEFT||k==KEY_UP)selected=(selected+display_count-1)%display_count;else if(k==13||k=='a')apply();}
+    if(tab==0&&display_count){if(k==KEY_RIGHT||k==KEY_DOWN)selected=(selected+1)%display_count;else if(k==KEY_LEFT||k==KEY_UP)selected=(selected+display_count-1)%display_count;else if(k==13||k=='a')apply();else if(k=='u')automatic_preview();}
     else if(tab==2){if(k=='b')choose_font(0);if(k=='d')choose_font(1);if(k=='h')choose_font(2);if(k=='o')choose_font(3);}
     else if(tab==3){if(k=='t'){system_sound(0);return;}if(k=='m')audio_mute(!audio_is_muted());else if(k=='c')system_sounds(!system_sounds(-1));else if(k=='-'||k==KEY_LEFT)audio_volume(audio_volume(-1)>10?audio_volume(-1)-10:0);else if(k=='+'||k=='='||k==KEY_RIGHT)audio_volume(audio_volume(-1)+10);else return;save();}
 }
@@ -70,7 +71,7 @@ void settings_click(int x,int y){
     if(x<0||y<0)return;if(y<24&&x<510&&x%130<120){category(x/130);return;}
     if(tab==0){if(y>=72&&y<180){int col=x/260,row=(y-72)/28,i=(selected<0?0:selected/8*8)+row*2+col;if(col<2&&x%260<240&&(y-72)%28<24&&i<display_count)selected=i;}
         else if(y>=188&&y<212&&display_count>8){int first=selected/8*8;if(x<140)selected=first>=8?first-8:0;else if(x>=156&&x<296)selected=first+8<display_count?first+8:display_count-1;}
-        else if(y>=220&&y<244&&x<140)apply();
+        else if(y>=220&&y<244){if(x<140)apply();else if(x>=312&&x<500)automatic_preview();}
     }else if(tab==1&&y>=76&&y<100){if(x<240)settings_key('1');else if(x>=260&&x<500)settings_key('2');}
     else if(tab==2){if(y>=76&&y<100){if(x<240)choose_font(0);else if(x>=260&&x<500)choose_font(1);}else if(y>=112&&y<136){if(x<240)choose_font(2);else if(x>=260&&x<500)choose_font(3);}}
     else if(tab==3){if(y>=76&&y<100){if(x<240)settings_key('m');else if(x>=260&&x<500)settings_key('c');}else if(y>=112&&y<136){if(x<110)settings_key('-');else if(x>=126&&x<236)settings_key('+');}else if(y>=156&&y<180&&x<240)settings_key('t');}

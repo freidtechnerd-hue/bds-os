@@ -16,7 +16,8 @@ void *alloc(usize);void dealloc(void*);void heap_reset(void);u32 heap_used(void)
 extern int screen_w,screen_h,graphics;
 typedef struct {u16 id,w,h;u32 address,stride;u8 red,green,blue;}DisplayMode;
 extern DisplayMode display_modes[32];extern int display_count;
-int bios_video(u16,u16,u16,u16*);void display_init(int);int display_current(void);int display_set(int);int display_save(void);
+int bios_video(u16,u16,u16,u16*);int bios_edid(u16);void display_init(int);int display_current(void);int display_set(int);int display_save(void);
+int display_auto_index(void);int display_auto_save(void);int display_automatic(void);
 void video_mode(const DisplayMode*);
 int video_matches(const DisplayMode*);
 void settings_init(void);void settings_open(void);void settings_draw(int,int);void settings_key(int);void settings_click(int,int);void settings_poll(void);int settings_pending(void);

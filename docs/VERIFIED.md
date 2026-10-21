@@ -6,8 +6,8 @@ The native player, display settings, ClassiCube, regression suites and exact
 public installer were exercised in QEMU, with additional VirtualBox checks
 and downloaded openly licensed DVD/music fixtures. See the [dated release
 report](RELEASE-2026-10-19.md) for binary hashes, passed cases and limits.
-Interactive DVD menus and physical CD playback remain unverified/unsupported
-as described in the [media guide](MEDIA.md); physical PCs are untested.
+That checkpoint did not include interactive DVD menus. The October 21 update
+adds menu support; physical CD drive playback and physical PCs remain untested.
 
 ## Desktop upgrade (October 12, 2026)
 

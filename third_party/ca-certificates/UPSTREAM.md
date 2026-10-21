@@ -1,0 +1,6 @@
+Mozilla CA certificates, extracted by curl.
+
+Source: https://curl.se/ca/cacert.pem
+SHA256: 796f1389bfea13c0ed78f663b765baaff54a508e5483786bd6ece73c5e3e3cbe
+Fetched: 2026-10-20
+License: MPL-2.0 (see LICENSE).

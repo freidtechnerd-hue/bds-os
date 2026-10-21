@@ -27,3 +27,7 @@ No proprietary commercial DOOM IWAD is bundled. Freedoom data is included with i
 - **libmpeg2 0.5.1**: MPEG Software Simulation Group and named contributors. GPL-2.0-or-later; upstream COPYING and provenance in `third_party/libmpeg2/`. Portable C decoder compiled into Media Player.
 - **liba52 0.7.4**: Aaron Holtzman, Michel Lespinasse and named contributors. GPL-2.0-or-later; COPYING and provenance in `third_party/liba52/`. AC-3 decoder compiled into Media Player.
 - **pl_mpeg**: Dominic Szablewski and contributors. MIT license in `third_party/pl_mpeg/LICENSE`; pinned commit in UPSTREAM.md. Used for MPEG Layer II audio.
+
+- **BearSSL**: Thomas Pornin and contributors; MIT. Pinned official source commit `7bea48e5e850ab4cafbe68d3765cdaba13a86d6f`, full license in `third_party/bearssl/LICENSE.txt`. Native adapter in `kernel/tls.c` and build configuration in `tools/build_tls.py`.
+- **Mozilla CA certificates / curl extraction**: MPL-2.0. Pinned bundle, SHA-256, provenance and license in `third_party/ca-certificates/`; compiled public trust anchors in `kernel/tls_anchors.h`.
+- **libdvdnav 7.0.0 / libdvdread 7.1.1**: VideoLAN and named upstream contributors. GPL-2.0-or-later core with LGPL-2.1-or-later portions; complete sources, COPYING files and provenance in their `third_party/` directories. BDS filesystem/VM event adapters live in `media/` and compile into Media Player.

@@ -28,20 +28,23 @@ $(BUILD)/entry.o: kernel/entry.asm | $(BUILD)
 	nasm -f elf32 $< -o $@
 $(BUILD)/bios.o: kernel/bios.asm | $(BUILD)
 	nasm -f elf32 $< -o $@
-$(BUILD)/kernel/%.o: kernel/%.c kernel/os.h kernel/storage.h include/bds.h | $(BUILD)
+$(BUILD)/kernel/%.o: kernel/%.c kernel/os.h kernel/storage.h kernel/edid.h include/bds.h | $(BUILD)
 	mkdir -p $(BUILD)/kernel
 	$(CC) $(CFLAGS) -c $< -o $@
 $(BUILD)/kernel/mp3.o: kernel/mp3.c third_party/minimp3/minimp3.h kernel/os.h include/bds.h | $(BUILD)
 	mkdir -p $(BUILD)/kernel
 	$(CC) $(filter-out -msoft-float,$(CFLAGS)) -mfpmath=387 -Idoom/include -c $< -o $@
-$(BUILD)/kernel/network.o: kernel/network.c kernel/os.h include/bds.h kernel/network/include/lwipopts.h kernel/network/include/arch/cc.h | $(BUILD)
+$(BUILD)/kernel/network.o: kernel/network.c kernel/tls.h kernel/os.h include/bds.h kernel/network/include/lwipopts.h kernel/network/include/arch/cc.h | $(BUILD)
 	mkdir -p $(BUILD)/kernel
 	$(CC) $(NETFLAGS) -c $< -o $@
 $(BUILD)/lwip/%.o: third_party/lwip/src/%.c kernel/network/include/lwipopts.h kernel/network/include/arch/cc.h kernel/os.h include/bds.h | $(BUILD)
 	mkdir -p $(dir $@)
 	$(CC) $(NETFLAGS) -c $< -o $@
-$(BUILD)/kernel.elf: $(BUILD)/entry.o $(KERNEL_OBJS) kernel/link.ld
-	$(LD) -m elf_i386 -T kernel/link.ld -o $@ $(BUILD)/entry.o $(KERNEL_OBJS)
+TLS_SRC := $(shell find third_party/bearssl/src -name '*.c' -o -name '*.h') $(wildcard third_party/bearssl/inc/*.h) kernel/tls.c kernel/tls.h kernel/tls_anchors.h tools/build_tls.py
+$(BUILD)/tls/libtls.a: $(TLS_SRC)
+	$(PY) tools/build_tls.py
+$(BUILD)/kernel.elf: $(BUILD)/entry.o $(KERNEL_OBJS) $(BUILD)/tls/libtls.a kernel/link.ld
+	$(LD) -m elf_i386 -T kernel/link.ld -o $@ $(BUILD)/entry.o $(KERNEL_OBJS) $(BUILD)/tls/libtls.a
 	grub-file --is-x86-multiboot2 $@
 $(BUILD)/bds-os.iso: $(BUILD)/kernel.elf grub/grub.cfg
 	mkdir -p $(BUILD)/iso/boot/grub
@@ -66,7 +69,7 @@ $(BUILD)/apps/image.run: apps/image.c $(UTILITY_SRC) | $(BUILD)
 	$(PY) tools/build_utilities.py image
 $(BUILD)/apps/browser.run: apps/browser.c apps/browser_number.c $(UTILITY_SRC) | $(BUILD)
 	$(PY) tools/build_utilities.py browser
-MEDIA_SRC := $(wildcard media/*.c media/*.h third_party/libmpeg2/libmpeg2/*.c third_party/libmpeg2/libmpeg2/*.h third_party/libmpeg2/include/*.h third_party/liba52/liba52/*.c third_party/liba52/liba52/*.h third_party/liba52/include/*.h third_party/pl_mpeg/*.h)
+MEDIA_SRC := $(shell find third_party/libdvdnav/src third_party/libdvdread/src media/compat -type f) $(wildcard media/*.c media/*.h third_party/libmpeg2/libmpeg2/*.c third_party/libmpeg2/libmpeg2/*.h third_party/libmpeg2/include/*.h third_party/liba52/liba52/*.c third_party/liba52/liba52/*.h third_party/liba52/include/*.h third_party/pl_mpeg/*.h)
 $(BUILD)/apps/player.run: $(MEDIA_SRC) tools/build_media.py tools/runpack.py doom/libc.c doom/include/libc.h include/bds.h apps/link.ld | $(BUILD)
 	$(PY) tools/build_media.py
 .PHONY: media test-media
@@ -86,7 +89,7 @@ test-classicube: grub
 	$(PY) tests/classicube.py
 freedoom:
 	$(PY) tools/freedoom.py
-$(BUILD)/seed.img: $(RUNS) $(BUILD)/apps/doom.run $(BUILD)/apps/nes.run $(BUILD)/apps/cube.run $(BUILD)/apps/image.run $(BUILD)/apps/browser.run tools/disk.py tools/desktop_assets.py assets/BOOT.BMP assets/WALLPAPR.BMP assets/wallpaper-source.png assets/HOME.HTM assets/DEMO.MP3 docs/MEDIA.md third_party/libmpeg2/COPYING third_party/liba52/COPYING third_party/pl_mpeg/LICENSE docs/DESKTOP-AUDIO.md docs/NETWORK-DESKTOP.md docs/DESKTOP-UPGRADE.md docs/GETTING-STARTED.md docs/CREDITS.md docs/CHANGELOG.md licenses/NOTICE.md licenses/AGPL-3.0.txt docs/CLASSICUBE.md third_party/classicube/misc/cc_textures.zip
+$(BUILD)/seed.img: $(RUNS) $(BUILD)/apps/doom.run $(BUILD)/apps/nes.run $(BUILD)/apps/cube.run $(BUILD)/apps/image.run $(BUILD)/apps/browser.run tools/disk.py tools/desktop_assets.py assets/BOOT.BMP assets/WALLPAPR.BMP assets/wallpaper-source.png assets/HOME.HTM assets/DEMO.MP3 docs/HTTPS.md docs/MEDIA.md third_party/libmpeg2/COPYING third_party/liba52/COPYING third_party/pl_mpeg/LICENSE docs/DESKTOP-AUDIO.md docs/NETWORK-DESKTOP.md docs/DESKTOP-UPGRADE.md docs/GETTING-STARTED.md docs/CREDITS.md docs/CHANGELOG.md licenses/NOTICE.md licenses/AGPL-3.0.txt docs/CLASSICUBE.md third_party/classicube/misc/cc_textures.zip
 	$(PY) tools/disk.py create $@
 $(BUILD)/data.img: | $(BUILD)/seed.img
 	cp $(BUILD)/seed.img $@

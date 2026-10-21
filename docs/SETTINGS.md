@@ -21,6 +21,19 @@ Game render detail is unchanged. Desktop windows and icons keep their pixel
 dimensions. Wallpaper fills the desktop by cropping proportionally, while
 the boot image fits inside the screen without distortion.
 
+New installations automatically choose the monitor's preferred EDID resolution.
+Supported aspect ratios include 4:3, 16:9, 16:10 and ultrawide. If the preferred
+size is unavailable, Auto chooses the largest firmware mode that fits the
+monitor and is within 2% of its aspect ratio; otherwise it keeps the boot size.
+Invalid/missing EDID also keeps the boot size. This detects a monitor's preferred
+pixel mode, not the size of the host VM window or its physical inches.
+
+Choose **Auto detect / U**, then **Keep**, to save automatic selection. Existing
+manually saved resolutions remain manual until you choose Auto. EDID base
+blocks, CTA native detailed timings and DisplayID 1.3 preferred timings are
+supported. QEMU standard VGA has a direct EDID fallback for firmware that
+truncates extension blocks. Hotplug monitor changes require restarting BDS.
+
 Normal boots restore `/DISPLAY.CFG` from the system volume. The GRUB
 **Desktop 800x600 (ignore saved settings)** entry is the recovery route.
 Higher resolutions use CPU rendering and require sufficient video memory;

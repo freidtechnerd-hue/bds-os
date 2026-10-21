@@ -1,7 +1,7 @@
 # Media Player
 
 Open **Media Player** on the desktop, or press **F10, M**. Terminal commands
-`MEDIA` and `PLAY` open its file picker; `PLAY V1:/MOVIES/FILM.VOB` opens a file
+`MEDIA` and `PLAY` automatically start a mounted DVD or audio CD, otherwise open the file picker; `PLAY V1:/MOVIES/FILM.VOB` opens a file
 on another volume. The player requires an SSE2 CPU and API version 6.
 
 | Media | Implemented support |
@@ -18,12 +18,11 @@ DVD decoding uses libmpeg2, liba52 and the MP2 decoder from pl_mpeg, compiled
 into the native RUN file. Files are streamed with bounded buffers. No host
 FFmpeg, Windows codec or Linux multimedia runtime runs inside BDS-OS.
 
-**DVD limitations:** no CSS decryption, DVD menus, subtitles, angle selection,
+**DVD limitations:** no CSS decryption, subtitle/SPU overlays, angle selection,
 DTS, multichannel PCM or alternate audio-track selection. The first supported
 audio stream is selected. UDF-only discs cannot be mounted; use an ISO9660
-bridge disc or copy unencrypted VOB files onto a readable volume. Title
-selection is by VOB filename, not IFO navigation; switching VOB parts can
-produce a short gap. MP4/H.264, WebM, streaming websites and Blu-ray are not
+bridge disc or copy unencrypted VOB files onto a readable volume. IFO discs use authored navigation and menus; VOB-only title selection uses
+filenames and switching their parts can produce a short gap. MP4/H.264, WebM, streaming websites and Blu-ray are not
 supported. Decoder software runs on the CPU; slow emulation can stutter.
 
 ## Controls
@@ -74,7 +73,7 @@ Press **F6**, select a firmware-provided resolution, **Apply**, then **Keep**
 within 15 seconds. Available 16:9 options include 1280×720, 1360×768,
 1366×768, 1600×900 and 1920×1080; 1280×800, 1440×900 and 1920×1200 are 16:10.
 Firmware determines which sizes appear. The 1360/1366 choices are approximate
-16:9 ratios. There is no arbitrary resizing or EDID-based monitor detection.
+16:9 ratios. Auto detects the monitor preferred EDID mode; see [Settings](SETTINGS.md). There is no arbitrary host-window resizing.
 
 For VirtualBox with the VM powered off, extra VBE modes can be configured:
 
@@ -95,3 +94,22 @@ QEMU and a host FFmpeg executable (`FFMPEG=/path/to/ffmpeg` overrides its
 location). Tests generate original tone/color fixtures, decode actual guest
 pictures and inspect captured PCM. No commercial disc contents are bundled.
 See the [verification record](VERIFIED.md) for the checks actually completed.
+
+## DVD menus and autoplay (October 21 update)
+
+The player compiles VideoLAN libdvdnav 7.0.0 and libdvdread 7.1.1's navigation
+and IFO parsers with a native read-only BDS adapter. **DVD / D** starts the first
+mounted disc containing `VIDEO_TS/VIDEO_TS.IFO`; an IFO can also be selected in
+Open. Authored first-play instructions run automatically, including introduction
+video and menus. **Arrows** select a menu button, **Enter** activates it, and
+**M** returns to the root menu. Clicking a menu button activates it. A yellow
+outline shows the active button. Previous/Next use DVD program navigation.
+VOB-only media retain the title/file picker fallback.
+
+Autoplay runs when Media Player opens or DVD/CD is selected. The desktop does
+not launch an application on insertion, and hotplug/remount support remains
+limited by the BIOS/optical driver. DVD subtitles/SPU overlay graphics and exact
+authored highlight palettes are not rendered. Menus whose button labels exist
+only in SPU overlays may therefore be incomplete. CSS-encrypted and UDF-only
+media remain unsupported. The freely licensed Big Buck Bunny NTSC disc is the
+real-disc menu test; this is not a claim of compatibility with every DVD.

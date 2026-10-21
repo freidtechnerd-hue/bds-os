@@ -1,3 +1,13 @@
+# October 21, 2026 — Automatic display, DVD navigation and HTTPS
+
+- Automatic preferred monitor resolution from validated EDID, including 4:3,
+  widescreen and DisplayID 4K; saved Auto setting and manual override.
+- Native libdvdnav menu VM, first-play/autoplay, arrow/Enter and mouse menu
+  selection, title/program navigation and root-menu return on unencrypted DVDs.
+- Certificate-validated native TLS 1.2, HTTP/HTTPS redirects and 2 MiB browser
+  pages. Live Wikipedia fetch works; visual layout remains simplified.
+- Full source and third-party license notices accompany this build.
+
 # Development after the video
 
 ## October 19, 2026

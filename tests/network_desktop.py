@@ -10,7 +10,7 @@ class Server(http.server.BaseHTTPRequestHandler):
         if self.path=='/redirect':
             self.send_response(302);self.send_header('Location','/second');self.end_headers();return
         body=(b'<html><h1>Ethernet acceptance</h1><p>HTML entity: &amp;.</p><a href="/second">Next page</a></html>' if self.path=='/' else b'<html><h1>Second page via TCP</h1><p>Link and redirect reached this page.</p></html>')
-        if self.path=='/large':body=b'x'*70000
+        if self.path=='/large':body=b'x'*(3*1024*1024)
         self.send_response(200);self.send_header('Content-Type','text/html')
         if self.path=='/chunk':
             self.send_header('Transfer-Encoding','chunked');self.end_headers()
@@ -50,9 +50,9 @@ def main():
         v.pump();at=len(v.log);v.s.sendall(('l'+base+'/chunk\r').encode());v.wait('BROWSER page rendered: '+base+'/chunk',start=at);quit_app(v)
         v.command('WEB '+base+'/redirect','BROWSER page rendered: '+base+'/second');quit_app(v)
         v.command('WEB '+base+'/chunk','BROWSER page rendered: '+base+'/chunk');quit_app(v)
-        v.command('WEB '+base+'/large','BROWSER fetch error: Page exceeds 64 KiB.');quit_app(v)
-        v.command('WEB https://example.com/','BROWSER fetch error: Use an http:// URL.');quit_app(v)
-        v.command('WEB '+base+'/','BROWSER page rendered: '+base+'/');quit_app(v);results+=['HTTP TCP request and Gumbo HTML5 rendering','keyboard hyperlink and address navigation','HTTP redirect and chunked response','oversized/HTTPS errors and successful retry']
+        v.command('WEB '+base+'/large','BROWSER fetch error: Page exceeds the 2 MiB limit.');quit_app(v)
+        v.command('WEB ftp://example.com/','BROWSER fetch error: Use an http:// or https:// URL.');quit_app(v)
+        v.command('WEB '+base+'/','BROWSER page rendered: '+base+'/');quit_app(v);results+=['HTTP TCP request and Gumbo HTML5 rendering','keyboard hyperlink and address navigation','HTTP redirect and chunked response','oversized/unsupported-scheme errors and successful retry']
         v.qmp('set_link',{'name':'n','up':False});time.sleep(.3);v.command('NET','Ethernet cable disconnected');v.qmp('set_link',{'name':'n','up':True});time.sleep(6)
         v.command('WEB '+base+'/','BROWSER page rendered: '+base+'/');quit_app(v);results+=['Ethernet cable loss and reconnection']
         v.command('DOOM','DOOM WAD selector ready');v.wait('FILE MANAGER OPEN: .WAD');v.capture('doom-wad-selector');v.pump();at=len(v.log);v.key('esc');v.wait('RUN returned: 0',start=at)

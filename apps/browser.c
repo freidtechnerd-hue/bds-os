@@ -2,10 +2,13 @@
 #include "bds.h"
 #include "gumbo.h"
 BdsApi*bds;
-#define MAX_LINES 2048
-static char lines[MAX_LINES][95],links[64][256],url[256]="/HOME.HTM",edit[256],status[160];
+#define MAX_LINES 4096
+#define MAX_LINKS 512
+#define PAGE_CAP (2*1024*1024)
+static int web_scheme(const char*s){return !strncmp(s,"https://",8)?8:!strncmp(s,"http://",7)?7:0;}
+static char lines[MAX_LINES][95],links[MAX_LINKS][256],url[256]="/HOME.HTM",edit[256],status[160];
 static int line_count,col,top,link_count,selected=-1,editing,edit_len;static u32 colors[MAX_LINES];static char*response;
-static int link_line[64],resources;static char page_title[80];
+static int link_line[MAX_LINKS],resources;static char page_title[80];
 static int resource(const char*,char*,int);
 #include "browser_style.h"
 #include "browser_script.h"
@@ -20,9 +23,9 @@ static void draw(void){
 static void newline(void){if(line_count>=MAX_LINES)return;if(col){lines[line_count][col]=0;line_count++;col=0;}}
 static void append(const char*s,u32 color){while(*s&&line_count<MAX_LINES){u8 c=*s++;if(c>=128){if((c&192)==128)continue;c='?';}if(style.pre&&c=='\n'){newline();continue;}if(isspace(c)){if(!style.pre&&(!col||lines[line_count][col-1]==' '))continue;c=' ';}if(col>=92-style.margin/8)newline();if(line_count>=MAX_LINES)break;if(!col){paper[line_count]=style.bg;alignment[line_count]=style.align;indent[line_count]=style.margin;}ink[line_count][col]=color?color:style.fg;weight[line_count][col]=style.bold;lines[line_count][col++]=c;lines[line_count][col]=0;}}
 static int absolute(const char*base,const char*ref,char*out){
-    if(!ref||strlen(ref)>240)return -1;if(strstr(ref,"://")){if(strncmp(ref,"http://",7))return -1;strcpy(out,ref);return 0;}if(!strncmp(ref,"//",2)){if(strlen(ref)>248)return -1;strcpy(out,"http:");strcat(out,ref);return 0;}
-    if(strncmp(base,"http://",7)){if(ref[0]=='/'){strcpy(out,ref);return 0;}const char*p=strrchr(base,'/');int n=p?p-base+1:0;if(n+strlen(ref)>255)return -1;memcpy(out,base,n);strcpy(out+n,ref);return 0;}
-    const char*authority=base+7;const char*slash=strchr(authority,'/');int root=slash?slash-base:strlen(base),prefix=root;
+    if(!ref||strlen(ref)>240)return -1;if(strstr(ref,"://")){if(!web_scheme(ref))return -1;strcpy(out,ref);return 0;}if(!strncmp(ref,"//",2)){if(strlen(ref)>248)return -1;strcpy(out,web_scheme(base)==8?"https:":"http:");strcat(out,ref);return 0;}
+    if(!web_scheme(base)){if(ref[0]=='/'){strcpy(out,ref);return 0;}const char*p=strrchr(base,'/');int n=p?p-base+1:0;if(n+strlen(ref)>255)return -1;memcpy(out,base,n);strcpy(out+n,ref);return 0;}
+    const char*authority=base+web_scheme(base);const char*slash=strchr(authority,'/');int root=slash?slash-base:strlen(base),prefix=root;
     if(ref[0]!='/'&&slash){const char*last=strrchr(slash,'/');prefix=last-base+1;}
     if(prefix+(ref[0]!='/'&&!slash)+strlen(ref)>255)return -1;memcpy(out,base,prefix);out[prefix]=0;if(ref[0]!='/'&&!slash)strcat(out,"/");strcat(out,ref);return 0;
 }
@@ -34,7 +37,7 @@ static void render(GumboNode*n,int depth){
     Style parent=style;style=element_style(e,parent);script_style(n,&style);if(style.hidden){style=parent;return;}if(tag==GUMBO_TAG_BODY&&n->parent==document_root)page_background=style.bg;
     int block=tag==GUMBO_TAG_P||tag==GUMBO_TAG_DIV||tag==GUMBO_TAG_LI||tag==GUMBO_TAG_PRE||tag==GUMBO_TAG_TR||tag==GUMBO_TAG_H1||tag==GUMBO_TAG_H2||tag==GUMBO_TAG_H3||tag==GUMBO_TAG_H4||tag==GUMBO_TAG_BR||tag==GUMBO_TAG_HR;
     if(block)newline();if(line_count>=MAX_LINES){style=parent;return;}if(tag==GUMBO_TAG_LI)append("* ",0);if(tag==GUMBO_TAG_HR)append("------------------------------------------------------------",0);
-    if(tag==GUMBO_TAG_A&&link_count<64){GumboAttribute*a=gumbo_get_attribute(&e->attributes,"href");if(a&&!absolute(url,a->value,links[link_count])){char number[12];link_line[link_count]=line_count;snprintf(number,sizeof(number),"[%d] ",++link_count);append(number,0x245da0);}}
+    if(tag==GUMBO_TAG_A&&link_count<MAX_LINKS){GumboAttribute*a=gumbo_get_attribute(&e->attributes,"href");if(a&&!absolute(url,a->value,links[link_count])){char number[12];link_line[link_count]=line_count;snprintf(number,sizeof(number),"[%d] ",++link_count);append(number,0x245da0);}}
     if(tag==GUMBO_TAG_IMG){GumboAttribute*a=gumbo_get_attribute(&e->attributes,"alt");append("[Image: ",0);append(a?a->value:"picture",0);append("] ",0);}
     if(tag==GUMBO_TAG_H1||tag==GUMBO_TAG_H2||tag==GUMBO_TAG_H3)colors[line_count]=0x206749;
     int html=0;const char*replacement=script_text(n,&html);
@@ -63,18 +66,18 @@ static int header(const char*data,int length,const char*key,char*out,int cap){
 static int chunk_decode(char*body,int n){int in=0,out=0;while(in<n){unsigned size=0;int digits=0;while(in<n&&isprint(body[in])&&body[in]!=';'&&body[in]!='\r'){int c=tolower(body[in++]),v=isdigit(c)?c-'0':c>='a'&&c<='f'?c-'a'+10:-1;if(v<0||digits++>7)return -1;size=size*16+v;}if(!digits)return -1;while(in<n&&body[in]!='\n')in++;if(in==n)return -1;in++;if(!size){body[out]=0;return out;}if(size>(unsigned)(n-in)||n-in-(int)size<2)return -1;memmove(body+out,body+in,size);out+=size;in+=size;if(body[in++]!='\r'||body[in++]!='\n')return -1;}return -1;}
 static int resource(const char*ref,char*out,int cap){
     char target[256];if(resources++>=8||absolute(url,ref,target))return -1;
-    if(!strncmp(target,"http://",7)){if(strncmp(url,"http://",7))return -1;const char*a=strchr(url+7,'/'),*b=strchr(target+7,'/');int an=a?a-url:strlen(url),bn=b?b-target:strlen(target);if(an!=bn||strncasecmp(url,target,an))return -1;char*raw=malloc(cap+2048);if(!raw)return -1;int n=bds->http_get(target,raw,cap+2048),result=-1;char*body=n>0?strstr(raw,"\r\n\r\n"):0;if(body&&atoi(raw+9)==200){int head=body-raw;body+=4;int size=n-(body-raw);char value[80];int encoded=header(raw,head,"Content-Encoding",value,sizeof(value));if(encoded==1&&strcasecmp(value,"identity"))goto done;if(header(raw,head,"Transfer-Encoding",value,sizeof(value))==1){if(strcasecmp(value,"chunked"))goto done;size=chunk_decode(body,size);}if(size>=0&&size<cap){memcpy(out,body,size);out[size]=0;result=size;}}done:free(raw);return result;}
+    if(web_scheme(target)){if(!web_scheme(url))return -1;const char*a=strchr(url+web_scheme(url),'/'),*b=strchr(target+web_scheme(target),'/');int an=a?a-url:strlen(url),bn=b?b-target:strlen(target);if(an!=bn||strncasecmp(url,target,an))return -1;char*raw=malloc(cap+2048);if(!raw)return -1;int n=bds->http_get(target,raw,cap+2048),result=-1;char*body=n>0?strstr(raw,"\r\n\r\n"):0;if(body&&atoi(raw+9)==200){int head=body-raw;body+=4;int size=n-(body-raw);char value[80];int encoded=header(raw,head,"Content-Encoding",value,sizeof(value));if(encoded==1&&strcasecmp(value,"identity"))goto done;if(header(raw,head,"Transfer-Encoding",value,sizeof(value))==1){if(strcasecmp(value,"chunked"))goto done;size=chunk_decode(body,size);}if(size>=0&&size<cap){memcpy(out,body,size);out[size]=0;result=size;}}done:free(raw);return result;}
     int f=bds->find(target),n=bds->size(f);if(n<0||n>=cap||bds->read(f,0,out,n)!=n)return -1;out[n]=0;return n;
 }
 static void clear_page(void){line_count=col=top=link_count=0;selected=-1;page_title[0]=0;page_background=0xe8e9db;memset(lines,0,sizeof(lines));}
 static int local_url(const char*s){return *s=='/'||((s[0]=='V'||s[0]=='v')&&isdigit(s[1])&&strchr(s,':'));}
 static int load(const char*target){
     if(strlen(target)>248)return -1;char clean[256];strcpy(clean,target);char*t=trim(clean);if(!*t)return -1;if(!local_url(t)&&!strstr(t,"://")){strcpy(url,"http://");strcat(url,t);}else strcpy(url,t);clear_page();strcpy(status,"Loading... ESC cancels the network request.");draw();
-    if(local_url(url)){int f=bds->find(url),n=bds->size(f);if(n<0||n>65535){strcpy(status,"Cannot open local page (limit 64 KiB).");draw();return -1;}if(bds->read(f,0,response,n)!=n)return -1;response[n]=0;int len=strlen(url);page(response,n,len>=4&&!strcasecmp(url+len-4,".TXT"));return 0;}
+    if(local_url(url)){int f=bds->find(url),n=bds->size(f);if(n<0||n>=PAGE_CAP){strcpy(status,"Cannot open local page (limit 2 MiB).");draw();return -1;}if(bds->read(f,0,response,n)!=n)return -1;response[n]=0;int len=strlen(url);page(response,n,len>=4&&!strcasecmp(url+len-4,".TXT"));return 0;}
     for(int redirect=0;redirect<5;redirect++){
-        int n=bds->http_get(url,response,65536);if(n<0){const char*s=n==-1?"No Ethernet link. Check the adapter and cable.":n==-2?"Use an http:// URL. HTTPS is not supported.":n==-3?"DNS lookup failed.":n==-5?"Page exceeds 64 KiB.":n==-6?"Request cancelled.":"Network request timed out or connection failed.";strcpy(status,s);bds->print("BROWSER fetch error: ");bds->print(s);bds->print("\n");draw();return -1;}
+        int n=bds->http_get(url,response,PAGE_CAP);if(n<0){const char*s=n==-1?"No Ethernet link. Check the adapter and cable.":n==-2?"Use an http:// or https:// URL.":n==-3?"DNS lookup failed.":n==-5?"Page exceeds the 2 MiB limit.":n==-6?"Request cancelled.":n==-7?"HTTPS certificate, handshake or secure connection failed.":n==-8?"HTTPS needs CPU RDRAND secure randomness. Enable a supported VM CPU.":n==-9?"HTTPS needs a valid UTC hardware date and time.":"Network request timed out or connection failed.";strcpy(status,s);bds->print("BROWSER fetch error: ");bds->print(s);bds->print("\n");draw();return -1;}
         char*body=strstr(response,"\r\n\r\n");if(!body||body-response>8192||strncmp(response,"HTTP/1.",7)){strcpy(status,"Invalid HTTP response.");draw();return -1;}int head=body-response;body+=4;int size=n-(body-response),code=atoi(response+9);char value[256]={0};
-        if(code==301||code==302||code==303||code==307||code==308){char next[256];if(header(response,head,"Location",value,sizeof(value))!=1||absolute(url,value,next)||strncmp(next,"http://",7)){strcpy(status,"Redirect requires HTTPS or an unsupported URL.");draw();return -1;}strcpy(url,next);continue;}
+        if(code==301||code==302||code==303||code==307||code==308){char next[256];if(header(response,head,"Location",value,sizeof(value))!=1||absolute(url,value,next)||!web_scheme(next)){strcpy(status,"Redirect has an unsupported URL.");draw();return -1;}strcpy(url,next);continue;}
         if(code!=200){snprintf(status,sizeof(status),"Server returned HTTP %d.",code);draw();return -1;}
         if(header(response,head,"Content-Encoding",value,sizeof(value))==1&&strcasecmp(value,"identity")){strcpy(status,"Compressed responses are not supported.");draw();return -1;}
         if(header(response,head,"Transfer-Encoding",value,sizeof(value))==1){if(strcasecmp(value,"chunked")||(size=chunk_decode(body,size))<0){strcpy(status,"Unsupported or damaged transfer encoding.");draw();return -1;}}
@@ -84,7 +87,7 @@ static int load(const char*target){
     }strcpy(status,"Too many redirects.");draw();return -1;
 }
 int app_main(BdsApi*api,int argc,char**argv){
-    bds=api;if(bds->version<4){bds->print("BROWSER requires BDS API v4\n");return 1;}response=malloc(65536);if(!response)return 1;bds->print("BROWSER native Gumbo HTML5 / lwIP / Elk ready\n");load(argc>1?argv[1]:"/HOME.HTM");int previous=0;
+    bds=api;if(bds->version<4){bds->print("BROWSER requires BDS API v4\n");return 1;}response=malloc(PAGE_CAP);if(!response)return 1;bds->print("BROWSER native Gumbo HTML5 / lwIP / Elk ready\n");load(argc>1?argv[1]:"/HOME.HTM");int previous=0;
     for(;;){int k=bds->key(0),x,y,buttons=bds->pointer(&x,&y);if((buttons&1)&&!previous){if(y>=26&&y<50&&x>=10&&x<710){editing=1;edit_len=0;edit[0]=0;draw();}else if(y>=26&&y<50&&x>=718){if(editing)k=13;}else if(y>=78&&y<526){int row=top+(y-78)/14;for(int i=0;i<link_count;i++)if(link_line[i]==row){editing=0;selected=i;k=13;break;}}}previous=buttons&1;
         if(k==KEY_ADDRESS||k==KEY_F1+1){editing=1;edit_len=0;edit[0]=0;draw();continue;}
         if(editing){if(k==27)editing=0;else if(k==13){editing=0;load(edit);}else if(k==8&&edit_len)edit[--edit_len]=0;else if(k>=32&&k<127&&edit_len<248){edit[edit_len++]=k;edit[edit_len]=0;}if(k)draw();}
