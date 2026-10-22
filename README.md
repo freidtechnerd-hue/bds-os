@@ -3,6 +3,11 @@
 > [display settings](docs/SETTINGS.md), [DVD controls](docs/MEDIA.md), and
 > [browser requirements/limits](docs/HTTPS.md).
 
+**October 21 release:** [Download the public installer ISO](https://github.com/freidtechnerd-hue/bds-os/releases/download/auto-display-dvd-https-2026-10-21/BDS-OS-Auto-Display-DVD-HTTPS-Public-2026-10-21.iso)
+or open the [release page for checksums, matching source and verification results](https://github.com/freidtechnerd-hue/bds-os/releases/tag/auto-display-dvd-https-2026-10-21).
+The exact public ISO passed eight installation checks and four installer safety
+checks in QEMU. Physical hardware and this update's VirtualBox path remain unverified.
+
 # BDS-OS Ultimate
 
 A bootable x86 hobby operating system created by **freidtechnerd-hue with
@@ -31,7 +36,8 @@ boots without the USB stick or optical media.
   progress bar, Start menu, and startup/system sounds.
 - Terminal, File Manager, editor, calculator, system information, five small
   games, BMP/PNG viewer and a [Media Player](docs/MEDIA.md) for music, MPEG video,
-  unencrypted DVD titles and BIN/CUE audio CDs (SSE2 required).
+  unencrypted DVD titles with authored menu navigation and autoplay, and
+  BIN/CUE audio CDs (SSE2 required).
 - Native DOOM with Freedoom, WAD picker, loading screen, music and effects;
   native InfoNES emulator with ROM picker and battery saves. Apps start in
   windows; **Ctrl+F** toggles fullscreen.

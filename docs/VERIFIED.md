@@ -1,5 +1,25 @@
 # Verification record
 
+## Automatic display, DVD menus and HTTPS (October 21, 2026)
+
+The [release report](RELEASE-2026-10-21.md) records the exact public ISO hash,
+successful clean rebuild, and QEMU acceptance results. Eight installation and
+four safety checks passed against that final ISO, including optical and hybrid
+USB installation, disk-only IDE/AHCI boot, persistence and unchanged rejected
+targets. An extraction audit verified the kernel, all 11 native apps, payload
+CRC32, licenses and public-only contents.
+
+Automatic EDID selection covers 4:3, widescreen and 4K, saved Auto across cold
+boots, a changed monitor and explicit manual overrides. Native HTTPS loads
+example.com and Wikipedia and rejects invalid certificates, missing RDRAND
+and invalid clock settings. The original Big Buck Bunny DVD exercises authored
+menus with keyboard/mouse buttons, autoplay, title playback and return to menu.
+Display, media, browser, Ethernet and desktop regression suites passed.
+
+Wikipedia retains simplified text/link rendering. Physical hardware and this
+update's VirtualBox path are unverified; see the release report for remaining
+DVD, browser and firmware limitations.
+
 ## Media, widescreen and ClassiCube (October 19, 2026)
 
 The native player, display settings, ClassiCube, regression suites and exact

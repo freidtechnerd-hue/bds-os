@@ -1,5 +1,9 @@
 # Install BDS-OS onto a dedicated disk
 
+Download the public installer and SHA-256 checksum from the
+[October 21 release](https://github.com/freidtechnerd-hue/bds-os/releases/tag/auto-display-dvd-https-2026-10-21).
+The matching source archives and exact-ISO verification report are included.
+
 For a guided walkthrough with recommended settings, see
 [the VM and real-hardware tutorial](GETTING-STARTED.md). Public GitHub release
 ISOs contain no commercial ROMs or personal saves. `make installer` uses your
