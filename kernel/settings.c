@@ -1,17 +1,17 @@
 #include "os.h"
-static int selected,previous=-1,tab,font_choice=1,auto_preview;static u32 deadline;static char status[96];
+static int selected,previous=-1,tab,font_choice=4,auto_preview;static u32 deadline;static char status[96];
 static const char*tabs[]={"Display","Colors","Fonts","Sounds"};
 int settings_pending(void){return previous>=0;}
 static int path(char*out,const char*name){return fs_qualify(fs_system_volume,name,out,256);}
-static int load_font(int choice){char p[256];if(!choice){font_reset();return 0;}if(path(p,choice==1?"/FONTS/DEFAULT.PSF":choice==2?"/FONTS/BOLD.PSF":"/FONTS/USER.PSF"))return -1;return font_load(p);}
+static int load_font(int choice){char p[256];if(choice==4){font_smooth(1);return 0;}if(!choice){font_reset();return 0;}if(path(p,choice==1?"/FONTS/DEFAULT.PSF":choice==2?"/FONTS/BOLD.PSF":choice==5?"/FONTS/USER.TTF":"/FONTS/USER.PSF"))return -1;return font_load(p);}
 static void save(void){
     char p[256];u8 b[16]={'B','D','P','1',desktop_theme(-1),audio_volume(-1),audio_is_muted(),system_sounds(-1),font_choice};
     if(path(p,"/SETTINGS.CFG")||fs_write(p,b,sizeof(b)))strcpy(status,"Changed for this session; system disk could not save it.");
-    else{strcpy(status,"Preferences saved on the system disk.");serial("SETTINGS: preferences saved\n");}
+    else{strcpy(status,"Preferences saved on the system disk.");serial("SETTINGS: preferences saved\n");system_sound(3);}
 }
 void settings_init(void){
     char p[256];u8 b[16];if(path(p,"/SETTINGS.CFG"))return;int f=fs_find(p);
-    if(fs_size(f)!=16||fs_read(f,0,b,16)!=16||memcmp(b,"BDP1",4)||b[4]>1||b[5]>100||b[6]>1||b[7]>1||b[8]>3)return;
+    if(fs_size(f)!=16||fs_read(f,0,b,16)!=16||memcmp(b,"BDP1",4)||b[4]>1||b[5]>100||b[6]>1||b[7]>1||b[8]>5)return;
     desktop_theme(b[4]);audio_volume(b[5]);audio_mute(b[6]);system_sounds(b[7]);if(!load_font(b[8]))font_choice=b[8];serial("SETTINGS: preferences restored\n");
 }
 void settings_open(void){if(!settings_pending()){tab=0;selected=display_current();strcpy(status,"Tab changes category. Arrows select; Enter previews.");}}
@@ -36,7 +36,7 @@ void settings_draw(int x,int y){
         text(x,y+44,"Fixed-width desktop and native application font",0x1b2922);
         control(x,y+76,240,"Built-in font [B]",font_choice==0);control(x+260,y+76,240,"Default PSF [D]",font_choice==1);
         control(x,y+112,240,"Bold PSF [H]",font_choice==2);control(x+260,y+112,240,"Choose PSF file [O]",font_choice==3);
-        text(x,y+164,"Preview: Aa Bb Cc 0123456789 !?",0x1b2922);text(x,y+192,"PSF1 glyphs are fitted to the desktop's 8 x 8 cells.",0x1b2922);
+        control(x+260,y+208,240,"Choose TrueType [T]",font_choice==5);text(x,y+164,"Preview: Aa Bb Cc 0123456789 !?",0x1b2922);control(x,y+208,240,"Smooth text [S]",font_choice==4);text(x,y+244,"Smooth: antialiased 8 x 12. PSF: classic 8 x 8.",0x1b2922);
     }else{
         text(x,y+44,audio_available()?"Audio output: supported controller ready":"Audio output: no supported controller detected",0x1b2922);
         control(x,y+76,240,audio_is_muted()?"Unmute [M]":"Mute [M]",audio_is_muted());control(x+260,y+76,240,system_sounds(-1)?"System sounds: on [C]":"System sounds: off [C]",system_sounds(-1));
@@ -52,9 +52,9 @@ static void keep(void){if(previous<0)return;previous=-1;if(auto_preview?display_
 void settings_poll(void){if(previous>=0&&(int)(ticks()-deadline)>=0)revert();}
 static void category(int i){tab=i;strcpy(status,"Tab changes category. Preferences save on the system disk.");serial("SETTINGS: tab ");serial(tabs[tab]);serial("\n");}
 static void choose_font(int choice){
-    if(choice==3){char p[256],dest[256];if(file_dialog(".PSF",p,sizeof(p)))return;
-        if(font_load(p)){strcpy(status,"Invalid PSF1 font. The previous font was retained.");return;}
-        if(path(dest,"/FONTS/USER.PSF")||fs_copy(p,dest)){strcpy(status,"Font loaded for this session; could not save a copy.");return;}
+    if(choice==3||choice==5){char p[256],dest[256];if(file_dialog(choice==5?".TTF":".PSF",p,sizeof(p)))return;
+        if(font_load(p)){strcpy(status,"Invalid PSF/TrueType font. The previous font was retained.");return;}
+        if(path(dest,choice==5?"/FONTS/USER.TTF":"/FONTS/USER.PSF")||fs_copy(p,dest)){strcpy(status,"Font loaded for this session; could not save a copy.");return;}
     }else if(load_font(choice)){strcpy(status,"Could not load the selected font from the system disk.");return;}
     font_choice=choice;save();
 }
@@ -63,7 +63,7 @@ void settings_key(int k){
     if(k==9){category((tab+1)%4);return;}if(k>='A'&&k<='Z')k+=32;
     if((tab==0||tab==1)&&(k=='1'||k=='2')){desktop_theme(k-'1');save();return;}
     if(tab==0&&display_count){if(k==KEY_RIGHT||k==KEY_DOWN)selected=(selected+1)%display_count;else if(k==KEY_LEFT||k==KEY_UP)selected=(selected+display_count-1)%display_count;else if(k==13||k=='a')apply();else if(k=='u')automatic_preview();}
-    else if(tab==2){if(k=='b')choose_font(0);if(k=='d')choose_font(1);if(k=='h')choose_font(2);if(k=='o')choose_font(3);}
+    else if(tab==2){if(k=='b')choose_font(0);if(k=='d')choose_font(1);if(k=='h')choose_font(2);if(k=='o')choose_font(3);if(k=='s')choose_font(4);if(k=='t')choose_font(5);}
     else if(tab==3){if(k=='t'){system_sound(0);return;}if(k=='m')audio_mute(!audio_is_muted());else if(k=='c')system_sounds(!system_sounds(-1));else if(k=='-'||k==KEY_LEFT)audio_volume(audio_volume(-1)>10?audio_volume(-1)-10:0);else if(k=='+'||k=='='||k==KEY_RIGHT)audio_volume(audio_volume(-1)+10);else return;save();}
 }
 void settings_click(int x,int y){
@@ -73,6 +73,6 @@ void settings_click(int x,int y){
         else if(y>=188&&y<212&&display_count>8){int first=selected/8*8;if(x<140)selected=first>=8?first-8:0;else if(x>=156&&x<296)selected=first+8<display_count?first+8:display_count-1;}
         else if(y>=220&&y<244){if(x<140)apply();else if(x>=312&&x<500)automatic_preview();}
     }else if(tab==1&&y>=76&&y<100){if(x<240)settings_key('1');else if(x>=260&&x<500)settings_key('2');}
-    else if(tab==2){if(y>=76&&y<100){if(x<240)choose_font(0);else if(x>=260&&x<500)choose_font(1);}else if(y>=112&&y<136){if(x<240)choose_font(2);else if(x>=260&&x<500)choose_font(3);}}
+    else if(tab==2){if(y>=76&&y<100){if(x<240)choose_font(0);else if(x>=260&&x<500)choose_font(1);}else if(y>=112&&y<136){if(x<240)choose_font(2);else if(x>=260&&x<500)choose_font(3);}else if(y>=208&&y<232){if(x<240)choose_font(4);else if(x>=260&&x<500)choose_font(5);}}
     else if(tab==3){if(y>=76&&y<100){if(x<240)settings_key('m');else if(x>=260&&x<500)settings_key('c');}else if(y>=112&&y<136){if(x<110)settings_key('-');else if(x>=126&&x<236)settings_key('+');}else if(y>=156&&y<180&&x<240)settings_key('t');}
 }

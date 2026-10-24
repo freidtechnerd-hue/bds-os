@@ -9,11 +9,11 @@ def png(ppm):
 def pixel(ppm,x,y):
     head,data=pathlib.Path(ppm).read_bytes().split(b'\n255\n',1);w=int(head.split()[1]);p=(y*w+x)*3;return data[p:p+3]
 class VM:
-    def __init__(self,name,disk,serial=True,iso=ROOT/"build/bds-os.iso",memory=128,extra=(),auto_display=False):
+    def __init__(self,name,disk,serial=True,iso=ROOT/"build/bds-os.iso",memory=128,extra=(),auto_display=False,emulator='qemu-system-i386'):
         extra=list(extra)
         if '-vga' not in extra:extra=['-vga','std']+extra
         self.name=name;self.log='';base=f'/tmp/bds-{os.getpid()}-{name}';self.qpath=base+'-qmp';self.spath=base+'-serial'
-        self.p=subprocess.Popen(['qemu-system-i386','-m',str(memory)]+(['-cdrom',str(iso)] if iso else [])+(['-drive',f'file={disk},format=raw,if=ide,index=0'] if disk else [])+([] if auto_display else ['-global','VGA.xres=800','-global','VGA.yres=600'])+list(extra)+['-display','none','-qmp',f'unix:{self.qpath},server=on,wait=off','-serial',f'unix:{self.spath},server=on,wait=off' if serial else 'none','-no-reboot'],stderr=open(LOG/f'{name}-qemu.log','w'))
+        self.p=subprocess.Popen([emulator,'-m',str(memory)]+(['-cdrom',str(iso)] if iso else [])+(['-drive',f'file={disk},format=raw,if=ide,index=0'] if disk else [])+([] if auto_display else ['-global','VGA.xres=800','-global','VGA.yres=600'])+list(extra)+['-display','none','-qmp',f'unix:{self.qpath},server=on,wait=off','-serial',f'unix:{self.spath},server=on,wait=off' if serial else 'none','-no-reboot'],stderr=open(LOG/f'{name}-qemu.log','w'))
         for _ in range(100):
             if pathlib.Path(self.qpath).exists() and (not serial or pathlib.Path(self.spath).exists()):break
             time.sleep(.05)
@@ -43,7 +43,7 @@ class VM:
             self.pump()
             if marker in self.log[start:]:return
             if 'FATAL' in self.log:raise AssertionError(self.log)
-            if 'DOOM exit to BDS-OS' in self.log[start:] and marker not in ('DOOM exit to BDS-OS','RUN returned: 0','BDS-OS Ultimate 0.2'):raise AssertionError(self.log)
+            if 'DOOM exit to BDS-OS' in self.log[start:] and marker not in ('DOOM exit to BDS-OS','RUN returned: 0','BDX-OS Ultimate 0.2'):raise AssertionError(self.log)
             time.sleep(.1)
         raise AssertionError(f'Timeout: {marker}\n{self.log[-3000:]}')
     def command(self,s,marker,timeout=90):
@@ -102,7 +102,7 @@ def doom_test():
     disk=ROOT/'build/doom-test.img';shutil.copyfile(ROOT/'build/seed.img',disk);v=VM('doom',disk)
     try:
         v.wait('DESKTOP ready');v.command('RUN /DOOM.RUN -iwad /FREEDOOM1.WAD -nosound -warp 1 1','DOOM playable level active',180)
-        v.wait('DOOM frame 100');v.capture('doom-level');v.key('up',900);v.wait('DOOM player moved');time.sleep(1);v.capture('doom-moved');v.key('f10');v.wait('DOOM exit to BDS-OS');v.wait('RUN returned: 0');v.command('VER','BDS-OS Ultimate 0.2');v.capture('doom-return');print('PASS DOOM native load, WAD, playable level, frames, movement, clean exit, fresh image boot',flush=True)
+        v.wait('DOOM frame 100');v.capture('doom-level');v.key('up',900);v.wait('DOOM player moved');time.sleep(1);v.capture('doom-moved');v.key('f10');v.wait('DOOM exit to BDS-OS');v.wait('RUN returned: 0');v.command('VER','BDX-OS Ultimate 0.2');v.capture('doom-return');print('PASS DOOM native load, WAD, playable level, frames, movement, clean exit, fresh image boot',flush=True)
     finally:v.close()
 if __name__=='__main__':
     import sys

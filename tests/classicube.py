@@ -62,6 +62,11 @@ def main():
         v.wait('DESKTOP ready');v.command('CUBE /CLASSIC/maps/fixture.cw','CLASSICUBE native')
         v.wait('CLASSICUBE frame 30',180);v.capture('classicube-world')
         passed.append('Native executable loads a ClassicWorld file and renders textured terrain')
+        for quality in [2,0,1]:
+            at=len(v.log);key(v,'f9',2);v.wait('CLASSICUBE quality changed',start=at)
+            d=Disk(disk);e=d.entries[d.find('/CLASSIC/BDS.CFG')];assert d.data[e[4]*512:e[4]*512+e[3]]==str(quality).encode()
+            v.capture('classicube-quality-'+str(quality))
+        passed.append('F9 resizes the live renderer through all three quality levels and saves each choice')
         v.mouse(down=True);time.sleep(.8);v.mouse(down=False);time.sleep(1)
         save(v,'removed');removed=world(disk,'removed');assert removed['BlockArray']!=blocks
         assert removed['BlockArray'].count(0)>blocks.count(0)

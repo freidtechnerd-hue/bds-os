@@ -15,7 +15,7 @@ def create(path):
         old = (old & 15) | (v<<4) if n&1 else (old & 0xf000) | v
         fat[p:p+2] = old.to_bytes(2,'little')
     cluster = 2
-    files = [(b'README  TXT', b'BDS-OS 8086: real BIOS boot, FAT12, native programs.\r\n'),
+    files = [(b'README  TXT', b'BDX-OS 8086: real BIOS boot, FAT12, native programs.\r\n'),
              (b'HELLO   RUN',(ROOT/'build/hello16.run').read_bytes())]
     for i,(name,data) in enumerate(files):
         entry = 83*512+i*32

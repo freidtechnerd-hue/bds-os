@@ -14,8 +14,10 @@ are optional inputs to `tests/real_media.py`, not bundled game/media assets.
 The download was checked against the archive's SHA-1 metadata. It is an
 original authored DVD image with VIDEO_TS IFO files and menu VOBs, including
 `VTS_01_0.VOB`; the main movie is title 02 (`VTS_02_1.VOB`). BDS selects DVD
-titles directly. Interactive menu navigation, CSS, subtitles and DTS are
-unsupported. Presence of menu assets does not imply menu support.
+titles directly. The October 21 release also tested authored menu navigation,
+autoplay and return to menu using this original ISO. CSS encryption, subtitle
+overlays and DTS remain unsupported. See the dated release reports for which
+tests were repeated against each binary.
 
 ## Open Goldberg Variations
 

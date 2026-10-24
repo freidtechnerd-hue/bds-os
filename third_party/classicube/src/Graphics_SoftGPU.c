@@ -5,6 +5,9 @@
 #include "_GraphicsBase.h"
 #include "Errors.h"
 #include "Window.h"
+#if defined(CC_BUILD_BDS) && defined(__SSE2__)
+#include <xmmintrin.h>
+#endif
 
 static cc_bool faceCulling;
 static int fb_width, fb_height; 
@@ -606,6 +609,13 @@ static void DrawTriangle3D(Vertex* V0, Vertex* V1, Vertex* V2) {
 	int a1, r1, g1, b1;
 	int a2, r2, g2, b2;
 	cc_bool texturing = gfx_format == VERTEX_FORMAT_TEXTURED;
+#if defined(CC_BUILD_BDS) && defined(__SSE2__)
+	/* Interpolate reciprocal W, depth, U and V together. SSE arithmetic has
+	   the same float precision as the depth buffer, including equal-depth passes. */
+	__m128 attrs0 = _mm_setr_ps(w0, z0, u0, v0);
+	__m128 attrs1 = _mm_setr_ps(w1, z1, u1, v1);
+	__m128 attrs2 = _mm_setr_ps(w2, z2, u2, v2);
+#endif
 
 	if (!texturing) {
 		R = PackedCol_R(color);
@@ -637,11 +647,18 @@ static void DrawTriangle3D(Vertex* V0, Vertex* V1, Vertex* V2) {
 			if (ic0 < 0 || ic1 < 0 || ic2 < 0) continue;
 			int db_index = y * db_stride + x;
 
+#if defined(CC_BUILD_BDS) && defined(__SSE2__)
+			__m128 attrs = _mm_add_ps(_mm_add_ps(_mm_mul_ps(_mm_set1_ps(ic0), attrs0),
+				_mm_mul_ps(_mm_set1_ps(ic1), attrs1)), _mm_mul_ps(_mm_set1_ps(ic2), attrs2));
+			float w = 1 / _mm_cvtss_f32(attrs);
+			float z = _mm_cvtss_f32(_mm_shuffle_ps(attrs, attrs, _MM_SHUFFLE(1,1,1,1))) * w;
+#else
 			float w = 1 / (ic0 * w0 + ic1 * w1 + ic2 * w2);
 			/* BDS/x87: compare at the depth buffer's float precision. Keeping
 			   an 80-bit temporary rejects pixels in the equal-depth water
 			   colour pass after the depth-only pass rounded them to 32 bits. */
 			volatile float z = (ic0 * z0 + ic1 * z1 + ic2 * z2) * w;
+#endif
 
 			if (gfx_depthTest && (z < 0 || z > depthBuffer[db_index])) continue;
 			if (!colWrite) {
@@ -650,8 +667,13 @@ static void DrawTriangle3D(Vertex* V0, Vertex* V1, Vertex* V2) {
 			}
 
 			if (texturing) {
+#if defined(CC_BUILD_BDS) && defined(__SSE2__)
+				float u = _mm_cvtss_f32(_mm_shuffle_ps(attrs, attrs, _MM_SHUFFLE(2,2,2,2))) * w;
+				float v = _mm_cvtss_f32(_mm_shuffle_ps(attrs, attrs, _MM_SHUFFLE(3,3,3,3))) * w;
+#else
 				float u = (ic0 * u0 + ic1 * u1 + ic2 * u2) * w;
 				float v = (ic0 * v0 + ic1 * v1 + ic2 * v2) * w;
+#endif
 				int texX = ((int)u) & texWidthMask;
 				int texY = ((int)v) & texHeightMask;
 

@@ -7,12 +7,17 @@ Pinned revisions and modifications are recorded in each upstream directory
 and [licenses/NOTICE.md](../licenses/NOTICE.md).
 
 The public ISO includes GRUB boot components generated using Ubuntu's
-`grub-common` and `grub-pc-bin` packages. The October 12 through October 21 builds use
+`grub-common` and `grub-pc-bin` packages. The October 12 through October 23 builds use
 **2.14-2ubuntu2**. Matching upstream source, Ubuntu patches and packaging are
 distributed beside the ISO in a GRUB source archive. The BDS change to the
 generated MBR is fully specified by `tools/installer.py`, which assembles
 the boot-drive handoff stub and creates the disk image. Its generated
 configuration comes from that script and `grub/grub.cfg`.
+
+The October 23 installed BIOS core embeds a symbol-stripped kernel and only
+the modules needed to read its embedded tar and display VBE graphics. The
+packager verifies that stripping preserves every loaded ELF segment. The
+live ISO retains the full kernel and complete GRUB video module set.
 
 To retrieve the same distribution source with matching source repositories
 enabled:
@@ -24,7 +29,7 @@ apt-get source grub2=2.14-2ubuntu2
 The source package contains `debian/` build rules and the corresponding
 upstream GRUB source. See its `INSTALL`, `README` and package build dependencies
 for building GRUB itself. This project's build requires the resulting i386-pc
-GRUB utilities/modules plus GCC, binutils, NASM, Python, xorriso, dosfstools
+GRUB utilities/modules plus GCC with its i386 multilib/libgcc support, binutils, NASM, Python, xorriso, dosfstools
 and mtools. Build/test package versions are recorded with each release.
 
 Freedoom is separately licensed game data. `tools/freedoom.py` identifies the

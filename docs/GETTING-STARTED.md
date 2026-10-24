@@ -1,7 +1,9 @@
-# Install and use BDS-OS
+# Install and use BDX-OS
 
 This guide targets the **32-bit GRUB edition**. The separate `legacy.img`
-floppy is an earlier 8086 text-only edition and does not contain the desktop.
+floppy has its own BIOS text desktop and a smaller feature set. See the
+[8086 guide](LEGACY.md). The [x64 preview guide](X64.md) covers the separate
+live 64-bit edition, which currently has no hard-disk installer.
 
 ## 1. Choose a setup
 
@@ -23,12 +25,12 @@ may work with equivalent emulated devices, but have not been verified.
 | Storage | IDE initially | SATA/USB require BIOS INT 13h services |
 
 No Guest Additions, Windows drivers, Linux drivers or host runtime belong
-inside BDS-OS. The public build includes native applications and Freedoom;
+inside BDX-OS. The public build includes native applications and Freedoom;
 bring your own NES ROMs or other compatible DOOM IWADs.
 
 ## 2. Download and verify
 
-Open [GitHub Releases](https://github.com/freidtechnerd-hue/bds-os/releases).
+Open [GitHub Releases](https://github.com/freidtechnerd-hue/bdx-os/releases).
 Download the release asset whose name contains **Public** and ends in `.iso`,
 plus its `.sha256` checksum. Source archives are for rebuilding; they are not
 bootable installer media.
@@ -36,13 +38,13 @@ bootable installer media.
 On Windows, compare this result with the value in the checksum file:
 
 ```powershell
-Get-FileHash .\BDS-OS-Desktop-Upgrade-Public-2026-10-12.iso -Algorithm SHA256
+Get-FileHash .\BDX-OS-Desktop-Upgrade-Public-2026-10-12.iso -Algorithm SHA256
 ```
 
 On Linux, from the download directory:
 
 ```sh
-sha256sum -c BDS-OS-Desktop-Upgrade-Public-2026-10-12.sha256
+sha256sum -c BDX-OS-Desktop-Upgrade-Public-2026-10-12.sha256
 ```
 
 Use the matching filename if a later release has a different date. Keep an
@@ -50,7 +52,7 @@ unchanged copy of the ISO and back up the VM disk before experimenting.
 
 ## 3. VirtualBox installation
 
-1. Create a VM named **BDS-OS**. Choose **Other / Other (32-bit)** or the
+1. Create a VM named **BDX-OS**. Choose **Other / Other (32-bit)** or the
    equivalent unknown 32-bit OS profile. Skip unattended installation.
 2. Assign **512 MiB RAM** and **one CPU**. Disable **EFI**. Leave ACPI enabled.
 3. Create a new dynamically allocated **1 GiB VDI**. It must be a disposable
@@ -66,7 +68,7 @@ unchanged copy of the ISO and back up the VM disk before experimenting.
    The update also recognizes supported PCnet and other PRO/1000 models.
 7. For sound, enable output with **ICH AC97** or **Intel HD Audio**. The actual
    tested VirtualBox host used HDA with its STAC9221 codec.
-8. Start the VM. In GRUB choose **Install BDS-OS to a dedicated disk**.
+8. Start the VM. In GRUB choose **Install BDX-OS to a dedicated disk**.
 9. Read the target list, select the **new disk**, check its size, and type the
    exact displayed **`ERASE <disk number>`** confirmation. This destroys that
    disk's previous partition layout and files. Esc cancels.
@@ -94,7 +96,7 @@ create a new virtual disk (use a new filename):
 qemu-img create -f qcow2 bds-system.qcow2 1G
 qemu-system-i386 -m 512 -smp 1 -vga std \
   -drive file=bds-system.qcow2,format=qcow2,if=ide,index=0 \
-  -cdrom BDS-OS-Desktop-Upgrade-Public-2026-10-12.iso -boot d \
+  -cdrom BDX-OS-Desktop-Upgrade-Public-2026-10-12.iso -boot d \
   -netdev user,id=net0 -device e1000,netdev=net0
 ```
 

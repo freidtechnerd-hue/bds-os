@@ -7,7 +7,7 @@ static void line(char*out,int max){int n=0;for(;;){console_full();int k=key(1);i
 void installer(u32 info){
     u8*image=0;u32 bytes=0,total=*(u32*)info;
     for(u8*p=(u8*)info+8;p<(u8*)info+total;){u32 n=*(u32*)(p+4);if(n<8)break;if(*(u32*)p==3){image=(u8*)*(u32*)(p+8);bytes=*(u32*)(p+12)-(u32)image;}p+=(n+7)&~7u;}
-    clear_console();print("BDS-OS DISK INSTALLER (legacy BIOS)\n\n");
+    clear_console();print("BDX-OS DISK INSTALLER (legacy BIOS)\n\n");
     if(!image||bytes<512||bytes%512||image[510]!=0x55||image[511]!=0xaa||memcmp(image+432,"BDSINST1",8)){print("Installer payload missing or invalid. No disks changed.\n");return;}
     print("Checking installer payload CRC32...\n");console_full();
     u32 expected_crc=*(u32*)(image+440);*(u32*)(image+440)=0;

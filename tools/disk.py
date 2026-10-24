@@ -55,7 +55,7 @@ class Disk:
         print(f'PASS BDSFS integrity: {len(names)} entries, {len(extents)} file extents')
 def create(path):
     data=bytearray(64*1024*1024);data[:8]=b'BDSFS01\0';struct.pack_into('<II',data,8,len(data)//512,128);pathlib.Path(path).write_bytes(data)
-    d=Disk(path);d.put('/README.TXT',b'BDS-OS Ultimate: persistent BDSFS01 IDE disk.\nUse HELP; F1 opens the desktop.\n')
+    d=Disk(path);d.put('/README.TXT',b'BDX-OS Ultimate: persistent BDSFS01 IDE disk.\nUse HELP; F1 opens the desktop.\n')
     for p in sorted((ROOT/'build/apps').glob('*.run')):d.put('/'+p.name.upper(),p.read_bytes())
     d.put('/GAMES');d.put('/DOCS');d.save();d.check()
     wad=ROOT/'build/assets/freedoom1.wad'

@@ -17,7 +17,7 @@ class Integrity(unittest.TestCase):
         self.d.blocks=20
         with self.assertRaises(AssertionError):self.d.put('/HUGE',b'x'*8192)
     def test_architecture(self):
-        for name in ['hello','calc','editor','sysinfo','game','doom','nes','browser','image','player']:
+        for name in ['hello','calc','editor','sysinfo','game','doom','nes','browser','image','player','cube','puzzle']:
             raw=(ROOT/f'build/apps/{name}.run').read_bytes();h=struct.unpack('<4sHHIIIIII',raw[:32])
             self.assertEqual(h[:3],(b'BDSR',2,2));self.assertEqual(h[3],len(raw)-32-h[8]);self.assertEqual(raw[32+h[3]:],(ROOT/f"assets/icons/{name.upper()}.ICO").read_bytes());self.assertLess(h[5],h[3]);self.assertGreaterEqual(h[6],h[3]+h[4]);self.assertLessEqual(h[6],8*1024*1024)
             checksum=0

@@ -34,7 +34,7 @@ def generate():
         mask=b''.join(bytes([sum((128>>x) for x in range(8) if not row[x]),sum((128>>x) for x in range(8) if not row[8+x]),0,0]) for row in reversed(pixels))
         icon=struct.pack('<HHH',0,1,1)+struct.pack('<BBBBHHII',16,16,0,0,1,32,len(dib+bitmap+mask),22)+dib+bitmap+mask
         iconpath=out/'icons'/f'{name}.ICO'
-        if not iconpath.exists() or iconpath.read_bytes()!=icon:iconpath.write_bytes(icon)
+        if not iconpath.exists():iconpath.write_bytes(icon)
     font=(ROOT/'kernel/font8x8.h').read_text();rows=re.findall(r'\{([^{}]+)\}',font)
     glyphs=[]
     for row in rows:
@@ -61,16 +61,23 @@ def populate(disk):
     disk.put('/DATA/EXAMPLE.BIN',b'BDS binary companion data\0\x01\x02\x03')
     disk.put('/DATA/EXAMPLE.DLL',b'BDS companion data; not a Windows executable DLL.\n')
     disk.put('/DATA/EXAMPLE.DCL',b'caption=BDS example\nicon=/ICONS/RUN.ICO\n')
-    for source,name in [('docs/HTTPS.md','HTTPS.TXT'),('third_party/bearssl/LICENSE.txt','BEARSSL-LICENSE.TXT'),('third_party/ca-certificates/LICENSE','CA-LICENSE.TXT'),('third_party/libdvdnav/COPYING','DVDNAV-LICENSE.TXT'),('third_party/libdvdread/COPYING','DVDREAD-LICENSE.TXT'),('docs/MEDIA.md','MEDIA.TXT'),('third_party/libmpeg2/COPYING','LIBMPEG2-LICENSE.TXT'),('third_party/liba52/COPYING','LIBA52-LICENSE.TXT'),('third_party/pl_mpeg/LICENSE','PLMPEG-LICENSE.TXT'),('docs/DESKTOP-UPGRADE.md','DESKTOP-UPGRADE.TXT'),('third_party/elk/LICENSE','ELK-NOTICE.TXT'),('licenses/AGPL-3.0.txt','AGPL-3.0.TXT'),('docs/DESKTOP-AUDIO.md','DESKTOP-AUDIO.TXT'),('docs/NETWORK-DESKTOP.md','NETWORK-DESKTOP.TXT'),('licenses/NOTICE.md','BDS-NOTICES.TXT'),('third_party/minimp3/LICENSE','MINIMP3-LICENSE.TXT'),('third_party/lwip/COPYING','LWIP-LICENSE.TXT'),('third_party/gumbo/COPYING','GUMBO-LICENSE.TXT'),('third_party/lodepng/LICENSE','LODEPNG-LICENSE.TXT')]:
+    for source,name in [('third_party/dejavu/LICENSE','DEJAVU-LICENSE.TXT'),('docs/HTTPS.md','HTTPS.TXT'),('third_party/bearssl/LICENSE.txt','BEARSSL-LICENSE.TXT'),('third_party/ca-certificates/LICENSE','CA-LICENSE.TXT'),('third_party/libdvdnav/COPYING','DVDNAV-LICENSE.TXT'),('third_party/libdvdread/COPYING','DVDREAD-LICENSE.TXT'),('docs/MEDIA.md','MEDIA.TXT'),('third_party/libmpeg2/COPYING','LIBMPEG2-LICENSE.TXT'),('third_party/liba52/COPYING','LIBA52-LICENSE.TXT'),('third_party/pl_mpeg/LICENSE','PLMPEG-LICENSE.TXT'),('docs/DESKTOP-UPGRADE.md','DESKTOP-UPGRADE.TXT'),('third_party/elk/LICENSE','ELK-NOTICE.TXT'),('licenses/AGPL-3.0.txt','AGPL-3.0.TXT'),('docs/DESKTOP-AUDIO.md','DESKTOP-AUDIO.TXT'),('docs/NETWORK-DESKTOP.md','NETWORK-DESKTOP.TXT'),('licenses/NOTICE.md','BDS-NOTICES.TXT'),('third_party/minimp3/LICENSE','MINIMP3-LICENSE.TXT'),('third_party/lwip/COPYING','LWIP-LICENSE.TXT'),('third_party/gumbo/COPYING','GUMBO-LICENSE.TXT'),('third_party/lodepng/LICENSE','LODEPNG-LICENSE.TXT')]:
         disk.put('/DOCS/'+name,(ROOT/source).read_bytes())
-    for source,name in [('GETTING-STARTED.md','INSTALL-GUIDE.TXT'),('CREDITS.md','PROJECT-CREDITS.TXT'),('CHANGELOG.md','CHANGELOG.TXT')]:
+    for source,name in [('FONTS.md','FONTS.TXT'),('COMPATIBILITY.md','COMPAT.TXT'),('GAMING.md','GAMING.TXT'),('MODERN-PLATFORM.md','MODERN.TXT'),('GETTING-STARTED.md','INSTALL-GUIDE.TXT'),('CREDITS.md','PROJECT-CREDITS.TXT'),('CHANGELOG.md','CHANGELOG.TXT')]:
         disk.put('/DOCS/'+name,(ROOT/'docs'/source).read_bytes())
+    disk.put('/DOCS/BDX-ASSETS.TXT',(ROOT/'assets/branding/README.md').read_bytes())
+    disk.put('/DOCS/XP-THEME.TXT',(ROOT/'assets/branding/xp-pack-readme.txt').read_bytes())
+    disk.put('/SOUNDS')
+    for p in (out/'sounds').glob('*.WAV'):disk.put('/SOUNDS/'+p.name,p.read_bytes())
+    disk.put('/FONTS/DEJAVU.TTF',(ROOT/'third_party/dejavu/DejaVuSansMono.ttf').read_bytes())
+    disk.put('/DOCS/FREETYPE-LICENSE.TXT',(ROOT/'third_party/freetype/docs/FTL.TXT').read_bytes())
     disk.put('/CLASSIC');disk.put('/CLASSIC/texpacks');disk.put('/CLASSIC/maps')
     disk.put('/CLASSIC/texpacks/classicube.zip',(ROOT/'third_party/classicube/misc/cc_textures.zip').read_bytes())
+    disk.put('/DOCS/2048-LICENSE.TXT',(ROOT/'third_party/2048/LICENSE.txt').read_bytes())
     disk.put('/DOCS/CLASSICUBE.TXT',(ROOT/'docs/CLASSICUBE.md').read_bytes())
     disk.put('/DOCS/CLASSICUBE-LICENSE.TXT',(ROOT/'third_party/classicube/license.txt').read_bytes())
     if disk.find('/CLASSIC/options.txt')<0:
-        disk.put('/CLASSIC/options.txt',b'defaulttexpack=classicube.zip\nviewdist=32\nfpslimit=Limit30FPS\nchat-logging=false\nmusicvolume=0\nsoundsvolume=0\n')
+        disk.put('/CLASSIC/options.txt',b'defaulttexpack=classicube.zip\nviewdist=32\nfpslimit=Limit60FPS\nchat-logging=false\nmusicvolume=0\nsoundsvolume=0\n')
     disk.save();disk.check()
 if __name__=='__main__':
     generate()

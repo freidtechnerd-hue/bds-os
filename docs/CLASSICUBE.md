@@ -1,4 +1,4 @@
-# ClassiCube for BDS-OS
+# ClassiCube for BDX-OS
 
 This is a native port of ClassiCube 1.3.8, compiled from the pinned upstream
 C sources, with its software renderer. It runs inside the BDS kernel without
@@ -13,8 +13,11 @@ SSE2 arithmetic; older CPUs receive a message instead of starting the game.
 
 Open Game Center with **F5**, then press **C**, or type `CUBE` in Terminal.
 The app starts in a window. **Ctrl+F** toggles the BDS fullscreen presentation.
-The renderer uses a 400×300 internal canvas, scaled to the app's window or
-screen; changing the desktop resolution does not increase its render detail.
+The default internal canvas is 400×300. **F9** cycles 320×240 performance,
+400×300 balanced and 640×480 detail, saving the choice in `/CLASSIC/BDS.CFG`.
+The canvas scales proportionally to the app window or screen. **F8** toggles
+a 60 FPS limit and uncapped rendering for the current launch. New data images
+default to a 60 FPS cap; existing options are retained.
 
 - **WASD**: move; **Space**: jump; mouse: look around.
 - **Left mouse**: remove a block; **right mouse**: place a block.
@@ -31,6 +34,15 @@ Keep generated/imported worlds small: apps share a 64 MiB heap, and BDSFS has
 128 total file/directory slots. An out-of-memory error terminates the game.
 
 ## Current limits
+
+Generated-world benchmarks use a disposable VirtualBox 6.1.50 VM (one vCPU,
+512 MiB, VBoxSVGA, 800×600 desktop and view distance 32), with throughput
+checked against host wall time. Use 400×300 balanced quality for the 60 FPS
+target; 640×480 detail can fall below it. Exact released-binary results are
+in the dated release report. Scene generation, host load and machine speed
+affect results; no universal 60 FPS guarantee applies. QEMU TCG software
+emulation is much slower. See [modern platform changes](MODERN-PLATFORM.md)
+and the benchmark scripts for the rendering improvements and test conditions.
 
 This port supports **offline single-player**. Multiplayer, account login,
 automatic downloads, plugins, clipboard integration, music and game sound

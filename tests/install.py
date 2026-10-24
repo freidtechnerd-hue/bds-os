@@ -41,7 +41,7 @@ def main():
     v=VM('installer-cd',disk,iso=ISO,memory=256,extra=['-boot','d'])
     try:
         install(v);v.command('WRITE /INSTALLED.TXT "disk-only persistence"','File written');v.command('RUN /HELLO.RUN','Hello from native i386')
-        v.command('MOUNT 2','Volume mounted');v.command('TYPE /README.TXT','BDS-OS BIOS installer');v.command('WRITE /BLOCKED.TXT nope','Operation failed');v.command('MOUNT 1','Volume mounted')
+        v.command('MOUNT 2','Volume mounted');v.command('TYPE /README.TXT','BDX-OS BIOS installer');v.command('WRITE /BLOCKED.TXT nope','Operation failed');v.command('MOUNT 1','Volume mounted')
     finally:v.close()
     results.append('optical installation, full read-back, optical filesystem and write rejection')
     v=VM('installed-ide',disk,iso=None)

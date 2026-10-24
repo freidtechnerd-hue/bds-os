@@ -38,9 +38,15 @@ def main():
     try:
         v.wait('BOOT BMP splash ready');start=time.monotonic();v.capture('boot-progress-early');time.sleep(.9);v.capture('boot-progress-middle');v.wait('BOOT progress complete after 3000 ms');elapsed=time.monotonic()-start;assert 2.6<elapsed<5.5,elapsed
         assert (LOG/'boot-progress-early.ppm').read_bytes()!=(LOG/'boot-progress-middle.ppm').read_bytes();v.wait('DESKTOP ready');v.wait('NET DHCP address: 10.0.2.15');v.capture('cloud-wallpaper-desktop')
-        # Bottom background is unobstructed and must match the supplied BMP pixel.
-        bmp=(ROOT/'assets/WALLPAPR.BMP').read_bytes();off=struct.unpack_from('<I',bmp,10)[0];sx,sy=750*200//800,500*150//600;p=off+(149-sy)*600+sx*3
-        assert pixel(LOG/'cloud-wallpaper-desktop.ppm',750,500)==bmp[p:p+3][::-1];results+=['3-second animated boot bar','supplied cloud wallpaper pixels','Intel PRO/1000 DHCP lease']
+        # Smooth mode reconstructs the supplied image, preserving its aspect.
+        # Compare with a floating-point bilinear reference (guest uses fixed point).
+        bmp=(ROOT/'assets/WALLPAPR.BMP').read_bytes();off=struct.unpack_from('<I',bmp,10)[0];bw,bh=struct.unpack_from('<ii',bmp,18);sw,sh=bw,bh
+        if 800*bh>600*bw:sh=bw*600//800
+        else:sw=bh*800//600
+        sx,sy=(bw-sw)//2+750*(sw-1)/799,(bh-sh)//2+500*(sh-1)/599;x,y=int(sx),int(sy);ax,ay=sx-x,sy-y
+        def source(x,y):p=off+(bh-1-y)*((bw*3+3)&~3)+x*3;return bmp[p:p+3][::-1]
+        expected=[int(source(x,y)[c]*(1-ax)*(1-ay)+source(x+1,y)[c]*ax*(1-ay)+source(x,y+1)[c]*(1-ax)*ay+source(x+1,y+1)[c]*ax*ay) for c in range(3)]
+        actual=pixel(LOG/'cloud-wallpaper-desktop.ppm',750,500);assert all(abs(a-b)<=2 for a,b in zip(actual,expected));results+=['3-second animated boot bar','smooth supplied cloud wallpaper pixels','Intel PRO/1000 DHCP lease']
         v.command('RUN /READPROB.RUN','READ PROBE: bulk, unaligned and EOF bytes verified');results+=['guest bulk-read boundaries and EOF verified byte-for-byte']
         v.command('IMAGE /CLOUDS.PNG','IMAGE decoded: /CLOUDS.PNG');v.capture('image-viewer-png');v.key('ctrl-f');v.wait('APP fullscreen enabled');v.capture('image-viewer-fullscreen');v.key('o');v.wait('FILE MANAGER OPEN: .BMP;.PNG');v.key('esc');time.sleep(.2);quit_app(v)
         v.command('IMAGE /WALLPAPR.BMP','IMAGE decoded: /WALLPAPR.BMP');v.capture('image-viewer-bmp');quit_app(v)

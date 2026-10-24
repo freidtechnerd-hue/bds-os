@@ -57,7 +57,7 @@ def platform_test():
             time.sleep(1.6);v.key('r');v.wait('NES reset');time.sleep(.2)
             v.key('esc');v.wait('NES exit to BDS-OS');v.wait('RUN returned: 0')
             v.key('f1');time.sleep(.2)
-            v.command('VER','BDS-OS Ultimate 0.2');v.command('CHECK','PASS: filesystem integrity')
+            v.command('VER','BDX-OS Ultimate 0.2');v.command('CHECK','PASS: filesystem integrity')
         finally:v.close()
         saved=read_file(Disk(disk),'/NES/TEST.SAV')
         assert len(saved)==8192 and saved[0]==2*(boot+1),(boot,saved[:8])
@@ -67,7 +67,7 @@ def platform_test():
     # File Manager recognizes .NES: enter NES directory and open TEST.NES.
     v=VM('nes-file-manager',disk)
     try:
-        v.wait('DESKTOP ready');v.command('CD /NES','BDS> CD /NES');time.sleep(.3)
+        v.wait('DESKTOP ready');v.command('CD /NES','BDX> CD /NES');time.sleep(.3)
         v.key('f2');time.sleep(.3);v.key('ret');v.wait('NES ROM: V0:/NES/TEST.NES');v.wait('NES frame 1')
         v.key('f10');v.wait('NES exit to BDS-OS');v.wait('RUN returned: 0')
     finally:v.close()

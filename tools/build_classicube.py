@@ -2,7 +2,7 @@
 import pathlib,subprocess
 ROOT=pathlib.Path(__file__).resolve().parents[1];src=ROOT/'third_party/classicube/src';out=ROOT/'build/classicube';out.mkdir(parents=True,exist_ok=True)
 inc=subprocess.check_output(['gcc','-print-file-name=include'],text=True).strip()
-flags=['-m32','-O2','-std=gnu99','-ffreestanding','-fno-builtin','-fno-pie','-fno-stack-protector','-msse2','-mno-mmx','-mfpmath=sse','-fno-math-errno','-ffunction-sections','-fdata-sections','-nostdinc','-isystem',inc,'-I'+str(src),'-I'+str(ROOT/'doom/include'),'-I'+str(ROOT/'include'),'-include',str(ROOT/'classicube/config.h'),'-DBDS_UTILITY','-Wno-pointer-sign']
+flags=['-m32','-O3','-std=gnu99','-ffreestanding','-fno-builtin','-fno-pie','-fno-stack-protector','-msse2','-mno-mmx','-mfpmath=sse','-fno-math-errno','-ffunction-sections','-fdata-sections','-nostdinc','-isystem',inc,'-I'+str(src),'-I'+str(ROOT/'doom/include'),'-I'+str(ROOT/'include'),'-include',str(ROOT/'classicube/config.h'),'-DBDS_UTILITY','-Wno-pointer-sign']
 objects=[];headers=[*src.glob('*.h'),ROOT/'include/bds.h',ROOT/'doom/include/libc.h',ROOT/'classicube/config.h',pathlib.Path(__file__)];stamp=max(p.stat().st_mtime for p in headers)
 for p in [*sorted(src.glob('*.c')),ROOT/'classicube/platform.c',ROOT/'classicube/window.c',ROOT/'classicube/start.c',ROOT/'doom/libc.c']:
     obj=out/(p.stem+'.o');objects.append(str(obj))

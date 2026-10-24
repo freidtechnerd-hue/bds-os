@@ -9,6 +9,10 @@ remain incomplete; this is not Firefox or a replacement for a modern browser.
 Compressed responses are not decoded; requests explicitly ask for identity
 encoding. CSS/scripts are bounded and limited to the same origin.
 
+The October 22 build also renders bounded local/same-origin inline PNGs,
+adds 32-entry back/forward history and address clipboard shortcuts. Full CSS,
+JPEG/WebP/SVG, cookies, forms and modern web apps remain unsupported.
+
 ## TLS and requirements
 
 BearSSL is compiled into the kernel and connected directly to lwIP TCP. TLS 1.2

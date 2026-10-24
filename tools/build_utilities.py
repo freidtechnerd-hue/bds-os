@@ -7,7 +7,7 @@ apps=sys.argv[1:] or ['image','browser']
 for app in apps:
     out=ROOT/'build/utilities'/app;out.mkdir(parents=True,exist_ok=True)
     sources=[ROOT/'apps/utility_libc.c',ROOT/f'apps/{app}.c']
-    sources+= [ROOT/'third_party/lodepng/lodepng.c'] if app=='image' else sorted((ROOT/'third_party/gumbo/src').glob('*.c'))+[ROOT/'third_party/elk/elk.c',ROOT/'apps/browser_number.c']
+    sources+= [ROOT/'third_party/lodepng/lodepng.c'] if app=='image' else sorted((ROOT/'third_party/gumbo/src').glob('*.c'))+[ROOT/'third_party/elk/elk.c',ROOT/'apps/browser_number.c',ROOT/'third_party/lodepng/lodepng.c']
     objects=[]
     for p in sources:
         obj=out/(p.stem+'.o');objects.append(str(obj));print('UTILITY compile',p.name,flush=True)

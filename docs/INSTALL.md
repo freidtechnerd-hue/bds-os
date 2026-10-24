@@ -1,7 +1,7 @@
-# Install BDS-OS onto a dedicated disk
+# Install BDX-OS onto a dedicated disk
 
 Download the public installer and SHA-256 checksum from the
-[October 21 release](https://github.com/freidtechnerd-hue/bds-os/releases/tag/auto-display-dvd-https-2026-10-21).
+[October 23 release](https://github.com/freidtechnerd-hue/bdx-os/releases/tag/bdx-desktop-x64-preview-2026-10-23).
 The matching source archives and exact-ISO verification report are included.
 
 For a guided walkthrough with recommended settings, see
@@ -14,7 +14,7 @@ stick as a disk image (raw/DD mode), or burn it as a CD/DVD image. Copying the
 `.iso` file onto an ordinary USB filesystem does not make the stick bootable.
 
 Boot the media using the computer's **legacy BIOS / CSM** boot option, with
-256 MiB or more RAM. Choose **Install BDS-OS to a dedicated disk**. Select a
+256 MiB or more RAM. Choose **Install BDX-OS to a dedicated disk**. Select a
 disk from the displayed list, check its capacity and interface, and type the
 exact `ERASE <disk number>` confirmation. ESC cancels. Installation destroys
 the selected disk's existing partition layout and files; it is not a dual-boot

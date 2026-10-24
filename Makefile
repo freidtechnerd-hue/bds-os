@@ -2,17 +2,24 @@ BUILD := build
 CC := gcc
 LD := ld
 PY := python3
-CFLAGS := -m32 -std=gnu11 -O2 -ffreestanding -fno-pie -fno-stack-protector -fno-builtin -mno-sse -mno-mmx -msoft-float -Wall -Wextra -Wno-unused-parameter -Wno-misleading-indentation -Ikernel -Iinclude
-KERNEL_OBJS := $(BUILD)/bios.o $(addprefix $(BUILD)/kernel/,$(addsuffix .o,main lib hardware video display settings assets appui audio cdrom hda sfx music mp3 storage media installer fs loader shell desktop power rtl8139 pcnet))
+CFLAGS := -m32 -std=gnu11 -O2 -ffreestanding -fno-pie -fno-stack-protector -fno-builtin -mno-sse -mno-mmx -msoft-float -Wall -Wextra -Wno-unused-parameter -Wno-misleading-indentation -Ikernel -Iinclude -Ithird_party/freetype/include
+KERNEL_OBJS := $(BUILD)/bios.o $(addprefix $(BUILD)/kernel/,$(addsuffix .o,main lib hardware video display settings assets appui services ttfont font_runtime audio cdrom hda sfx music mp3 storage media installer fs loader shell desktop power rtl8139 pcnet))
 LWIP_SRC := $(wildcard third_party/lwip/src/core/*.c third_party/lwip/src/core/ipv4/*.c) third_party/lwip/src/netif/ethernet.c
 LWIP_OBJS := $(patsubst third_party/lwip/src/%.c,$(BUILD)/lwip/%.o,$(LWIP_SRC))
 NETFLAGS := $(CFLAGS) -Ikernel/network/include -Ithird_party/lwip/src/include
 KERNEL_OBJS += $(BUILD)/kernel/network.o $(LWIP_OBJS)
-APPS := hello calc editor sysinfo game player
+APPS := hello calc editor sysinfo game player puzzle
 RUNS := $(addprefix $(BUILD)/apps/,$(addsuffix .run,$(APPS)))
 
 .PHONY: all legacy grub installer doom nes freedoom clean test test-ui test-doom test-nes test-install test-storage test-audio test-desktop test-network test-internet test-upgrade test-resolutions test-display-settings desktop-data run-legacy run-grub
 all: legacy grub
+.PHONY: x64 test-x64 test-gaming
+x64:
+	$(PY) tools/build_x64.py
+test-x64: x64
+	$(PY) tests/x64.py
+test-gaming: grub
+	$(PY) tests/gaming_performance.py
 $(BUILD):
 	mkdir -p $(BUILD)
 $(BUILD)/boot16.bin: legacy/boot.asm | $(BUILD)
@@ -28,7 +35,7 @@ $(BUILD)/entry.o: kernel/entry.asm | $(BUILD)
 	nasm -f elf32 $< -o $@
 $(BUILD)/bios.o: kernel/bios.asm | $(BUILD)
 	nasm -f elf32 $< -o $@
-$(BUILD)/kernel/%.o: kernel/%.c kernel/os.h kernel/storage.h kernel/edid.h include/bds.h | $(BUILD)
+$(BUILD)/kernel/%.o: kernel/%.c kernel/os.h kernel/storage.h kernel/edid.h kernel/ui_font.h include/bds.h | $(BUILD)
 	mkdir -p $(BUILD)/kernel
 	$(CC) $(CFLAGS) -c $< -o $@
 $(BUILD)/kernel/mp3.o: kernel/mp3.c third_party/minimp3/minimp3.h kernel/os.h include/bds.h | $(BUILD)
@@ -43,8 +50,8 @@ $(BUILD)/lwip/%.o: third_party/lwip/src/%.c kernel/network/include/lwipopts.h ke
 TLS_SRC := $(shell find third_party/bearssl/src -name '*.c' -o -name '*.h') $(wildcard third_party/bearssl/inc/*.h) kernel/tls.c kernel/tls.h kernel/tls_anchors.h tools/build_tls.py
 $(BUILD)/tls/libtls.a: $(TLS_SRC)
 	$(PY) tools/build_tls.py
-$(BUILD)/kernel.elf: $(BUILD)/entry.o $(KERNEL_OBJS) $(BUILD)/tls/libtls.a kernel/link.ld
-	$(LD) -m elf_i386 -T kernel/link.ld -o $@ $(BUILD)/entry.o $(KERNEL_OBJS) $(BUILD)/tls/libtls.a
+$(BUILD)/kernel.elf: $(BUILD)/entry.o $(KERNEL_OBJS) $(BUILD)/tls/libtls.a $(BUILD)/font32/libfont.a kernel/link.ld
+	$(LD) -m elf_i386 -T kernel/link.ld -o $@ $(BUILD)/entry.o $(KERNEL_OBJS) $(BUILD)/tls/libtls.a $(BUILD)/font32/libfont.a $(shell $(CC) -m32 -print-libgcc-file-name)
 	grub-file --is-x86-multiboot2 $@
 $(BUILD)/bds-os.iso: $(BUILD)/kernel.elf grub/grub.cfg
 	mkdir -p $(BUILD)/iso/boot/grub
@@ -54,7 +61,7 @@ $(BUILD)/bds-os.iso: $(BUILD)/kernel.elf grub/grub.cfg
 $(BUILD)/apps/%.o: apps/%.c apps/common.h include/bds.h | $(BUILD)
 	mkdir -p $(BUILD)/apps
 	$(CC) $(CFLAGS) -Wno-unused-function -ffunction-sections -c $< -o $@
-$(BUILD)/apps/%.run: $(BUILD)/apps/%.o apps/link.ld tools/runpack.py
+$(BUILD)/apps/%.run: $(BUILD)/apps/%.o apps/link.ld tools/runpack.py $(wildcard assets/icons/*.ICO)
 	$(LD) -m elf_i386 -T apps/link.ld -o $(BUILD)/apps/$*.elf $<
 	objcopy -O binary $(BUILD)/apps/$*.elf $(BUILD)/apps/$*.bin
 	$(PY) tools/runpack.py $(BUILD)/apps/$*.elf $(BUILD)/apps/$*.bin $@
@@ -89,7 +96,7 @@ test-classicube: grub
 	$(PY) tests/classicube.py
 freedoom:
 	$(PY) tools/freedoom.py
-$(BUILD)/seed.img: $(RUNS) $(BUILD)/apps/doom.run $(BUILD)/apps/nes.run $(BUILD)/apps/cube.run $(BUILD)/apps/image.run $(BUILD)/apps/browser.run tools/disk.py tools/desktop_assets.py assets/BOOT.BMP assets/WALLPAPR.BMP assets/wallpaper-source.png assets/HOME.HTM assets/DEMO.MP3 docs/HTTPS.md docs/MEDIA.md third_party/libmpeg2/COPYING third_party/liba52/COPYING third_party/pl_mpeg/LICENSE docs/DESKTOP-AUDIO.md docs/NETWORK-DESKTOP.md docs/DESKTOP-UPGRADE.md docs/GETTING-STARTED.md docs/CREDITS.md docs/CHANGELOG.md licenses/NOTICE.md licenses/AGPL-3.0.txt docs/CLASSICUBE.md third_party/classicube/misc/cc_textures.zip
+$(BUILD)/seed.img: $(RUNS) $(BUILD)/apps/doom.run $(BUILD)/apps/nes.run $(BUILD)/apps/cube.run $(BUILD)/apps/image.run $(BUILD)/apps/browser.run tools/disk.py tools/desktop_assets.py $(wildcard assets/icons/*.ICO assets/sounds/*.WAV) assets/branding/README.md assets/branding/xp-pack-readme.txt docs/MODERN-PLATFORM.md docs/FONTS.md docs/COMPATIBILITY.md docs/GAMING.md third_party/dejavu/LICENSE third_party/dejavu/DejaVuSansMono.ttf third_party/freetype/docs/FTL.TXT assets/BOOT.BMP assets/WALLPAPR.BMP assets/wallpaper-source.png assets/HOME.HTM assets/DEMO.MP3 docs/HTTPS.md docs/MEDIA.md third_party/libmpeg2/COPYING third_party/liba52/COPYING third_party/pl_mpeg/LICENSE docs/DESKTOP-AUDIO.md docs/NETWORK-DESKTOP.md docs/DESKTOP-UPGRADE.md docs/GETTING-STARTED.md docs/CREDITS.md docs/CHANGELOG.md licenses/NOTICE.md licenses/AGPL-3.0.txt docs/CLASSICUBE.md third_party/classicube/misc/cc_textures.zip
 	$(PY) tools/disk.py create $@
 $(BUILD)/data.img: | $(BUILD)/seed.img
 	cp $(BUILD)/seed.img $@
@@ -139,3 +146,8 @@ test-nes: all
 	$(PY) tests/nes.py
 clean:
 	rm -rf $(BUILD)
+
+$(BUILD)/font32/libfont.a: $(shell find third_party/freetype/src third_party/freetype/include kernel/fontconfig -type f) tools/build_freetype.py
+	$(PY) tools/build_freetype.py 32
+
+$(RUNS) $(BUILD)/apps/doom.run $(BUILD)/apps/nes.run $(BUILD)/apps/cube.run $(BUILD)/apps/image.run $(BUILD)/apps/browser.run: $(wildcard assets/icons/*.ICO)

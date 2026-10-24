@@ -3,7 +3,14 @@
 typedef unsigned char u8;
 typedef unsigned short u16;
 typedef unsigned int u32;
-typedef unsigned int usize;
+typedef __SIZE_TYPE__ usize;
+#ifdef __x86_64__
+#define BDS_RUN_ARCH 3
+#define BDS_ARCH_NAME "x86-64"
+#else
+#define BDS_RUN_ARCH 2
+#define BDS_ARCH_NAME "i386"
+#endif
 #define KEY_UP 256
 #define KEY_DOWN 257
 #define KEY_LEFT 258
@@ -19,6 +26,11 @@ typedef unsigned int usize;
 #define KEY_MENU 517
 #define KEY_OPEN 518
 #define KEY_ADDRESS 519
+#define KEY_COPY 520
+#define KEY_PASTE 521
+#define KEY_CUT 522
+#define KEY_SELECT_ALL 523
+typedef struct {u32 bytes,abi,arch_bits,uptime_ms,heap_used,heap_total,screen_width,screen_height,frames,last_frame_ms;} BdsSystemInfo;
 typedef struct {u32 lba;u8 number,control;u16 reserved;} CdTrack;
 typedef struct {char model[41];u32 count,leadout;CdTrack tracks[99];} CdInfo;
 typedef struct {
@@ -75,6 +87,11 @@ typedef struct {
     int (*cd_read)(int,u32,u32,void*); /* CD-DA sectors, 2352 bytes each */
     void (*audio_pause)(int);
     u32 (*audio_pending)(void); /* milliseconds of queued PCM, excluding hardware tail */
+    /* ABI v7: bounded shared clipboard, runtime metrics and direct 4:3 frames. */
+    int (*clipboard_set)(const char*,u32); /* max 4095 bytes; copies data */
+    int (*clipboard_get)(char*,u32); /* returns bytes excluding NUL, -1 if too small */
+    int (*system_info)(BdsSystemInfo*,u32);
+    void (*frame_submit)(const u32*,int,int); /* synchronous, does not retain pixels */
 } BdsApi;
 typedef struct __attribute__((packed)) {
     char magic[4];u16 version,arch;u32 code,bss,entry,memory,checksum,flags;

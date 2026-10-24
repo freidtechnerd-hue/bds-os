@@ -22,16 +22,18 @@ def click(v,x,y):
 def body_text(v,name,expected):
     p=v.capture(name).with_suffix('.ppm');head,data=p.read_bytes().split(b'\n255\n',1);w,h=map(int,head.split()[1:3]);assert (w,h)==(800,600)
     # Fullscreen first text row must contain the requested DOM text exactly.
-    rows=re.findall(r'\{([^{}]+)\}',(ROOT/'kernel/font8x8.h').read_text());font=[]
-    for row in rows:
-        values=re.findall(r'0x([0-9a-fA-F]{2})',row)
-        if len(values)==8:font.append([int(x,16) for x in values])
+    rows=re.findall(r'\{([^{}]+)\}',(ROOT/'kernel/ui_font.h').read_text())
+    font=[[int(x) for x in row.split(',')] for row in rows if len(row.split(','))==96]
+    width=len(expected)*8+1;reference=[[list(bytes.fromhex('ddeeff')) for _ in range(width)] for _ in range(12)]
     for i,c in enumerate(expected):
-        for yy,bits in enumerate(font[ord(c)]):
-            for xx in range(8):
-                # Bold writes the glyph again one pixel to the right.
-                is_ink=bool(bits&(1<<xx)) or (xx>0 and bool(bits&(1<<(xx-1))))
-                if is_ink:assert pixel(p,16+i*8+xx,78+yy)==bytes.fromhex('123456'),(i,xx,yy)
+        # Bold composites a second antialiased glyph one pixel to the right.
+        for offset in (0,1):
+            for yy in range(12):
+                for xx in range(8):
+                    alpha=font[ord(c)][yy*8+xx];dest=reference[yy][i*8+xx+offset]
+                    reference[yy][i*8+xx+offset]=[(fg*alpha+bg*(255-alpha))//255 for fg,bg in zip(bytes.fromhex('123456'),dest)]
+    for yy in range(12):
+        for xx in range(width):assert pixel(p,16+xx,78+yy)==bytes(reference[yy][xx]),(xx,yy)
     assert pixel(p,790,300)==bytes.fromhex('ddeeff')
 def compile_probe():
     out=ROOT/'build/volume-probe';out.mkdir(exist_ok=True)
@@ -61,8 +63,8 @@ def main():
             passed+=['mouse address + Go, Ctrl+L, bare host and link navigation','external CSS cascade and hidden text; JS loop/function/DOM write verified in framebuffer','infinite loop and recursive scripts return errors and browser remains usable']
             v.capture('upgrade-resources-before');v.key('f2');time.sleep(.3);v.key('right');v.wait('FILE MANAGER VOLUME: 1');v.capture('upgrade-resources-other-drive')
             for x,y in [(24,32),(26,33),(26,98),(30,167)]:assert pixel(LOG/'upgrade-resources-before.ppm',x,y)==pixel(LOG/'upgrade-resources-other-drive.ppm',x,y)
-            v.key('f9');v.wait('BROWSER page rendered: /HOME.HTM',start=v.log.rfind('FILE MANAGER VOLUME: 1'));quit_app(v);v.key('f1');time.sleep(.3);v.command('MOUNT 0','Volume mounted');v.command('RUN /PROBE.RUN','VOLUME PROBE: choose');v.key('right');v.wait('FILE MANAGER VOLUME: 1',start=v.log.rfind('VOLUME PROBE: choose'));v.key('ret');v.wait('VOLUME PROBE: handles, picker restore, write and resources passed');time.sleep(.4);v.capture('upgrade-embedded-icon');assert pixel(LOG/'upgrade-embedded-icon.ppm',93,43)==bytes.fromhex('3e7153');quit_app(v)
-            v.command('DOOM','DOOM WAD selector ready');v.key('right');v.wait('FILE MANAGER VOLUME: 1',start=v.log.rfind('DOOM WAD selector ready'));v.capture('upgrade-wad-other-drive');v.key('ret');v.wait('FILE MANAGER SELECTED: V1:/GAME.WAD');v.wait('DOOM frame 1',180);v.capture('upgrade-doom-other-drive');v.key('f10');v.wait('RUN returned: 0',start=v.log.rfind('FILE MANAGER SELECTED: V1:/GAME.WAD'));v.command('TYPE /README.TXT','BDS-OS Ultimate');v.command('CHECK','PASS: filesystem integrity')
+            v.key('f9');v.wait('BROWSER page rendered: /HOME.HTM',start=v.log.rfind('FILE MANAGER VOLUME: 1'));quit_app(v);v.key('f1');time.sleep(.3);v.command('MOUNT 0','Volume mounted');v.command('RUN /PROBE.RUN','VOLUME PROBE: choose');v.key('right');v.wait('FILE MANAGER VOLUME: 1',start=v.log.rfind('VOLUME PROBE: choose'));v.key('ret');v.wait('VOLUME PROBE: handles, picker restore, write and resources passed');time.sleep(.4);v.capture('upgrade-embedded-icon');icon=(ROOT/'assets/icons/PLAYER.ICO').read_bytes();off=struct.unpack_from('<I',icon,18)[0]+40+(15-4)*64+7*4;assert pixel(LOG/'upgrade-embedded-icon.ppm',93,43)==icon[off:off+3][::-1];quit_app(v)
+            v.command('DOOM','DOOM WAD selector ready');v.key('right');v.wait('FILE MANAGER VOLUME: 1',start=v.log.rfind('DOOM WAD selector ready'));v.capture('upgrade-wad-other-drive');v.key('ret');v.wait('FILE MANAGER SELECTED: V1:/GAME.WAD');v.wait('DOOM frame 1',180);v.capture('upgrade-doom-other-drive');v.key('f10');v.wait('RUN returned: 0',start=v.log.rfind('FILE MANAGER SELECTED: V1:/GAME.WAD'));v.command('TYPE /README.TXT','BDX-OS Ultimate');v.command('CHECK','PASS: filesystem integrity')
             passed+=['File Manager drive switch preserves desktop icons and system app launch','picker restores volume; original file handle remains readable; qualified writes persist','embedded RUN icon overrides conflicting sidecar','DOOM WAD selector loads game from secondary drive']
             v.key('f10');time.sleep(.3);v.capture('upgrade-start-menu');v.key('p');v.p.wait(timeout=10);v.pump();assert 'POWER: shutting down' in v.log;passed+=['Start-menu ACPI power off exits QEMU']
         finally:v.close()

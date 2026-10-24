@@ -1,6 +1,12 @@
 #ifndef OS_H
 #define OS_H
 #include "bds.h"
+#ifdef __x86_64__
+#define BDS_ICON_BYTES 8192
+#else
+#define BDS_ICON_BYTES 2048
+#endif
+#define WINDOW_TITLE_COLOR 0x000080
 static inline void outb(u16 p,u8 v){__asm__ volatile("outb %0,%1"::"a"(v),"Nd"(p));}
 static inline u8 inb(u16 p){u8 v;__asm__ volatile("inb %1,%0":"=a"(v):"Nd"(p));return v;}
 static inline void outw(u16 p,u16 v){__asm__ volatile("outw %0,%1"::"a"(v),"Nd"(p));}
@@ -9,7 +15,7 @@ static inline void outl(u16 p,u32 v){__asm__ volatile("outl %0,%1"::"a"(v),"Nd"(
 static inline u32 inl(u16 p){u32 v;__asm__ volatile("inl %1,%0":"=a"(v):"Nd"(p));return v;}
 void *memcpy(void*,const void*,usize);void *memset(void*,int,usize);int memcmp(const void*,const void*,usize);
 usize strlen(const char*);int strcmp(const char*,const char*);int stricmp(const char*,const char*);
-void strcpy(char*,const char*);void number(char*,u32);int atoi(const char*);
+char*strcpy(char*,const char*);void number(char*,u32);int atoi(const char*);
 void serial_init(void);void serial(const char*);void print(const char*);void clear_console(void);
 int key(int);int keyevent(void);u32 ticks(void);void sleep(u32);void hardware_init(void);
 void *alloc(usize);void dealloc(void*);void heap_reset(void);u32 heap_used(void);
@@ -22,6 +28,7 @@ void video_mode(const DisplayMode*);
 int video_matches(const DisplayMode*);
 void settings_init(void);void settings_open(void);void settings_draw(int,int);void settings_key(int);void settings_click(int,int);void settings_poll(void);int settings_pending(void);
 void video_init(u32);void rect(int,int,int,int,u32);void text(int,int,const char*,u32);void present(void);void blit(const u32*,int,int);
+void pixel_blend(int,int,u32);
 int fs_init(void);int fs_find(const char*);int fs_read(int,u32,void*,u32);int fs_write(const char*,const void*,u32);int fs_size(int);
 int fs_mkdir(const char*);int fs_remove(const char*);int fs_rename(const char*,const char*);int fs_copy(const char*,const char*);
 int fs_volume(void);extern int fs_system_volume;
@@ -36,6 +43,12 @@ void cursor_draw(void);
 int font_load(const char*);void font_reset(void);int bmp_draw(const char*);void boot_splash(void);
 void wallpaper_init(void);void wallpaper_draw(void);void video_stretch(const u32*,int,int);
 void video_scaled(const u32*,int,int,int,int,int,int);
+void present_region(int,int,int,int);
+void text_surface(u32*,int,int,int,int,const char*,u32);
+void font_smooth(int);int font_is_smooth(void);
+void app_frame_submit(const u32*,int,int);
+int clipboard_set(const char*,u32);int clipboard_get(char*,u32);
+int system_info(BdsSystemInfo*,u32);void frame_record(void);
 void system_sound(int);int system_sounds(int);int audio_volume(int);
 int desktop_theme(int);
 void net_init(void);void net_poll(void);int net_info(char*,u32);int http_get(const char*,char*,u32);
@@ -52,3 +65,6 @@ int fs_readdir(const char*,int,void*);
 int app_mouse_capture(int);int input_relative(int*,int*);int input_modifiers(void);
 void input_date_time(int*);
 #endif
+
+void window_control(int,int,int);void sfx_init(void);void sfx_mix(short*,u32);
+int strncmp(const char*,const char*,usize);

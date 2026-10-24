@@ -1,3 +1,24 @@
+# October 23, 2026 — BDX-OS desktop and x64 preview
+
+The project is now **BDX-OS (Binary Development eXperience)**. Existing BDSFS
+and RUN identifiers remain compatible; historical releases retain their names.
+
+- Supplied BDX logos, XP icon theme and startup/click/error/notification recordings.
+- Native 32×32 x64 icons, transparent icon backgrounds, navy title bars and black boot surround.
+- Graphic close/minimize/maximize buttons, window shortcuts, antialiased text,
+  smoother wallpaper and a 4K wallpaper cache in the x64 edition.
+- Native FreeType TTF loading, file picker and persistent font selection.
+- Clipboard, editor selection/copy/cut/paste, live System Monitor and app API 7.
+- ClassiCube direct-frame/SSE rendering improvements, F8 frame cap and F9 quality.
+- Browser inline PNGs, back/forward history and address clipboard controls.
+- Real x86-64 long-mode preview, native IDE BDSFS writes and six native apps.
+- Native 2048 with undo and persistent saves in both i386 and x64.
+- 8086 BIOS text desktop, themes and speaker settings.
+
+DOSBox-X, Windows/DOS EXE execution, protected processes, preemptive multitasking,
+GPU drivers and full modern web compatibility remain unfinished. The x64 build
+is a preview with fewer drivers than i386. See [details](MODERN-PLATFORM.md).
+
 # October 21, 2026 — Automatic display, DVD navigation and HTTPS
 
 - Automatic preferred monitor resolution from validated EDID, including 4:3,

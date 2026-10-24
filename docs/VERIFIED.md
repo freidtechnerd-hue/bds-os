@@ -1,5 +1,22 @@
 # Verification record
 
+## BDX desktop and native x64 preview (October 23, 2026)
+
+See the [release report](RELEASE-2026-10-23.md) for the renamed project's
+desktop, font, sound, gaming and x64 milestone, exact acceptance results and
+remaining limitations. A clean exported source tree builds all three editions.
+Both kernels, the 8086 floppy, twelve i386 apps and six x64 apps reproduce
+byte-for-byte; DOOM and Media Player require mapping diagnostic source paths.
+
+TrueType checks cover DejaVu, Arial, Times New Roman and Comic Sans, malformed
+input, font selection and cold-boot persistence. The supplied sound recordings
+were identified in AC'97 and HDA output. The x64 checks verify the processor's
+long-mode state, native apps and raw IDE persistence. DOSBox-X and Windows
+EXE execution remain unimplemented. Physical hardware remains unverified.
+Framebuffer checks also verify the black boot surround, navy desktop/app
+title bars, icon transparency and native 32×32 x64 artwork. All six x64 RUN
+files carry checksummed 32×32 icon trailers.
+
 ## Automatic display, DVD menus and HTTPS (October 21, 2026)
 
 The [release report](RELEASE-2026-10-21.md) records the exact public ISO hash,

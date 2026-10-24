@@ -5,20 +5,20 @@ The 32-byte little-endian header is defined by `RunHeader` in `include/bds.h`.
 | Offset | Bytes | Meaning |
 | --- | --- | --- |
 | 0 | 4 | ASCII `BDSR` |
-| 4 | 2 | Version = 2 for new i386 apps; version 1 remains accepted |
-| 6 | 2 | Architecture: 1 = 8086 real mode, 2 = 32-bit x86 |
+| 4 | 2 | Version = 2 for new i386/x64 apps; version 1 remains accepted |
+| 6 | 2 | Architecture: 1 = 8086 real mode, 2 = 32-bit x86, 3 = x86-64 |
 | 8 | 4 | Initialized code/data byte count, excluding header |
 | 12 | 4 | Zero-initialized BSS byte count |
 | 16 | 4 | Entry offset relative to payload |
 | 20 | 4 | Required total payload memory |
-| 24 | 4 | Checksum over code/data plus icon trailer (arch 2); zero on arch 1 |
-| 28 | 4 | Version 2: icon trailer length, 22–2048 bytes; version 1: zero |
+| 24 | 4 | Checksum over code/data plus icon trailer (arch 2/3); zero on arch 1 |
+| 28 | 4 | Version 2: icon trailer length, 22–2048 bytes on i386 or 22–8192 on x64; version 1: zero |
 
 Payload is executable machine code, constants, and initialized data. No scripts or host ELF/PE executable files are accepted. The ELF build product is converted to raw payload and wrapped in this header. There are no relocations or imports in version 1: every binary must be linked for its architecture's specified base.
 
 ## Architecture 2
 
-Link code/data at linear 0x00800000. BSS immediately follows the raw initialized bytes. Maximum total memory is 8 MiB. Entry is called with the C cdecl signature `int app_main(BdsApi *api, int argc, char **argv)`. The current function table is API version 4, preserving the complete v1/v2/v3 prefixes. Apps check the version before using appended fields.
+Link code/data at linear 0x00800000. BSS immediately follows the raw initialized bytes. Maximum total memory is 8 MiB. Entry is called with the C cdecl signature `int app_main(BdsApi *api, int argc, char **argv)`. The current function table is API version 7, preserving the complete v1–v6 prefixes. Apps check the version before using appended fields.
 
 Version 2 stores a 16×16, 32-bit BMP-format Windows ICO directly after the
 code/data payload. The icon is part of the file/checksum but is never copied
@@ -27,6 +27,12 @@ The packer automatically selects `assets/icons/APPNAME.ICO`, falling back to
 RUN.ICO for future apps. Pass an optional fourth argument to runpack.py for a
 custom icon. Embedded icons take priority over sidecar .ICO files. Version-1
 binaries can still use sidecars or the system fallback icon.
+
+The x64 packer uses native 32×32 ICOs from `assets/icons32`, including embedded
+app icons. Desktop shortcuts display those 32 source pixels directly; title
+bars and compact file rows fit them into 16 pixels. Both editions honor the
+ICO transparency mask and alpha channel. The original i386 trailer limit and
+16×16 format remain supported.
 
 Checksum starts at zero and accumulates `sum = sum * 31 + byte` modulo 2^32 over the entire payload. Loader checks magic, version, architecture, flags, exact file size, bounded BSS/memory, entry bounds, and checksum before execution. Missing, truncated, incompatible or corrupted files produce errors and return to the shell/desktop. Checksum is an integrity check, not authentication.
 
@@ -106,6 +112,32 @@ short hardware DMA tail. `cd_read` accepts 1–16 sectors of 2352 bytes each;
 callers supply the destination capacity. CD APIs return negative on failure.
 These services are trusted ring-0 calls, not a security boundary. Media Player
 requires API 6 and SSE2; older apps retain their original function offsets.
+
+### API version 7
+
+`clipboard_set(text, bytes)` copies up to 4095 bytes into shared kernel storage;
+`clipboard_get(buffer, capacity)` returns the length, including a trailing NUL
+in the buffer but excluding it from the result. Too-small buffers or excessive
+lengths return -1 without replacing the clipboard. Clipboard data survives app
+exit, but is not saved to disk.
+
+`system_info(info, bytes)` fills `BdsSystemInfo` with architecture, uptime,
+heap capacity/use, screen dimensions, total app frames and last frame interval.
+It returns -1 for insufficient output space.
+
+`frame_submit(pixels, width, height)` synchronously presents a 4:3 RGB canvas
+up to 1024×768 through a single scaling pass. It does not retain the caller's
+pointer or copy into the persistent logical app surface. Use `surface_blit`
+when composing an image with other app drawing. Input/pointer coordinates
+remain 800×600; games translate them into their chosen internal render size.
+
+## Architecture 3
+
+The x64 preview uses the same header, checksum, memory bounds and link address
+as architecture 2, but compiles for System V AMD64 with `-mno-red-zone`, 64-bit
+pointers and native `usize`. Its API table is not binary-compatible with i386.
+Use `tools/build_x64.py`; both loaders reject the other architecture. See
+[x64 preview](X64.md) for supported services and current limits.
 
 ## Architecture 1
 

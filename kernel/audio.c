@@ -29,7 +29,7 @@ void audio_init(void){
     outl(busmaster+0x10,(u32)descriptors);tail=0;outb(busmaster+0x15,0);outb(busmaster+0x1b,1);ready=1;backend=1;rp=wp=0;print("AUDIO: Intel AC'97 ready, 48000 Hz stereo PCM\n");
 }
 static short clamp(int v){return v>32767?32767:v<-32768?-32768:v;}
-void audio_fill(short*p,u32 frames){memset(p,0,frames*4);if(paused)return;music_mix(p,frames);for(u32 i=0;i<frames;i++)if(rp!=wp){int r=rp%RING;p[i*2]=clamp(p[i*2]+ring[r*2]);p[i*2+1]=clamp(p[i*2+1]+ring[r*2+1]);rp++;}if(muted)memset(p,0,frames*4);else if(master!=100)for(u32 i=0;i<frames*2;i++)p[i]=p[i]*master/100;}
+void audio_fill(short*p,u32 frames){memset(p,0,frames*4);if(paused)return;music_mix(p,frames);for(u32 i=0;i<frames;i++)if(rp!=wp){int r=rp%RING;p[i*2]=clamp(p[i*2]+ring[r*2]);p[i*2+1]=clamp(p[i*2+1]+ring[r*2+1]);rp++;}sfx_mix(p,frames);if(muted)memset(p,0,frames*4);else if(master!=100)for(u32 i=0;i<frames*2;i++)p[i]=p[i]*master/100;}
 void audio_pump(void){
     if(!ready||busy)return;busy=1;if(backend==2){hda_pump();busy=0;return;}int civ=inb(busmaster+0x14)&31;u16 status=inw(busmaster+0x16);int queued=(tail-civ+32)%32+1;if((status&3)==3)queued=0;
     while(queued<4){tail=(tail+1)&31;audio_fill(dma[tail],FRAMES);outb(busmaster+0x15,tail);queued++;}

@@ -6,13 +6,31 @@ ROOT=pathlib.Path(__file__).resolve().parents[1]
 def run(*args): subprocess.run(list(map(str,args)),check=True)
 def build(data):
     out=ROOT/'build/installer';out.mkdir(parents=True,exist_ok=True)
-    cfg=(ROOT/'grub/grub.cfg').read_bytes()
+    # This BIOS-only installed path uses VBE RGB32 modes. The live ISO keeps
+    # GRUB's complete video module set.
+    cfg=(ROOT/'grub/grub.cfg').read_bytes().replace(b'insmod all_video',b'insmod vbe')
+    # Debug/symbol tables are not loaded by GRUB. Keep them in the developer
+    # ELF, but omit them from the embedded copy to fit BIOS core.img limits.
+    kernel=out/'kernel-boot.elf'
+    run('objcopy','--strip-debug','--strip-unneeded',ROOT/'build/kernel.elf',kernel)
+    def load_segments(blob):
+        phoff=struct.unpack_from('<I',blob,28)[0]
+        entsize,count=struct.unpack_from('<HH',blob,42)
+        result=[]
+        for i in range(count):
+            fields=struct.unpack_from('<8I',blob,phoff+i*entsize)
+            typ,offset,vaddr,paddr,filesz,memsz,flags,align=fields
+            if typ==1:result.append((vaddr,paddr,memsz,flags,align,blob[offset:offset+filesz]))
+        return result
+    assert load_segments(kernel.read_bytes())==load_segments((ROOT/'build/kernel.elf').read_bytes()),'Stripping changed a loaded kernel segment'
     # GRUB's embedded tar contains everything required to boot the installed
     # kernel, independent of USB/CD, boot partitions or drive enumeration order.
     with tarfile.open(out/'boot.tar','w',format=tarfile.USTAR_FORMAT) as tar:
-        for name,blob in [('boot/grub/grub.cfg',cfg),('boot/kernel.elf',(ROOT/'build/kernel.elf').read_bytes())]:
+        for name,blob in [('boot/grub/grub.cfg',cfg),('boot/kernel.elf',kernel.read_bytes())]:
             entry=tarfile.TarInfo(name);entry.size=len(blob);entry.mtime=0;tar.addfile(entry,io.BytesIO(blob))
-    run('grub-mkimage','-O','i386-pc','-o',out/'core.img','-p','(memdisk)/boot/grub','-m',out/'boot.tar','biosdisk','part_msdos','fat','iso9660','memdisk','tar','normal','multiboot2','all_video')
+    # Installed GRUB reads only its embedded tar; the kernel owns disk access.
+    # Avoid redundant physical filesystem modules in the size-limited BIOS core.
+    run('grub-mkimage','-O','i386-pc','-o',out/'core.img','-p','(memdisk)/boot/grub','-m',out/'boot.tar','memdisk','tar','normal','multiboot2','vbe')
     core=bytearray((out/'core.img').read_bytes());n=(len(core)+511)//512
     assert 1<n<2047,'GRUB core exceeds MBR embedding area'
     struct.pack_into('<QHH',core,512-12,2,n-1,0x820)
@@ -54,20 +72,20 @@ jmp 0:{entry}
     iso=out/'iso';(iso/'boot/grub').mkdir(parents=True,exist_ok=True)
     (iso/'boot/kernel.elf').write_bytes((ROOT/'build/kernel.elf').read_bytes())
     (iso/'system.img').write_bytes(image)
-    (iso/'README.TXT').write_text('BDS-OS BIOS installer. Dedicated disk installation erases the target.\n256 MiB RAM; legacy BIOS/CSM; FAT12/16/32 and BDSFS read/write, optical read-only.\n')
+    (iso/'README.TXT').write_text('BDX-OS BIOS installer. Dedicated disk installation erases the target.\n256 MiB RAM; legacy BIOS/CSM; FAT12/16/32 and BDSFS read/write, optical read-only.\n')
     (iso/'boot/grub/grub.cfg').write_text('''set timeout=5
 set default=0
 set gfxmode=800x600x32
 set gfxpayload=keep
 insmod all_video
 terminal_output console
-menuentry "Install BDS-OS to a dedicated disk (ERASES target)" {
+menuentry "Install BDX-OS to a dedicated disk (ERASES target)" {
     multiboot2 /boot/kernel.elf installer origin=$cmdpath
     module2 /system.img system-image
     boot
 }
-menuentry "BDS-OS desktop / inspect disks without installing" { multiboot2 /boot/kernel.elf desktop origin=$cmdpath; boot; }
-menuentry "BDS-OS command line / inspect disks" { multiboot2 /boot/kernel.elf shell origin=$cmdpath; boot; }
+menuentry "BDX-OS desktop / inspect disks without installing" { multiboot2 /boot/kernel.elf desktop origin=$cmdpath; boot; }
+menuentry "BDX-OS command line / inspect disks" { multiboot2 /boot/kernel.elf shell origin=$cmdpath; boot; }
 menuentry "Reboot" { reboot; }
 ''')
     run('grub-mkrescue','-o',ROOT/'build/bds-os-installer.iso',iso)

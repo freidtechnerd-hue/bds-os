@@ -22,7 +22,6 @@ static u32 pci(u32 a,int off){outl(0xcf8,0x80000000|a|(off&252));return inl(0xcf
 u32 sys_now(void){return ticks();}
 u32 net_random(void){random_state^=random_state<<13;random_state^=random_state>>17;random_state^=random_state<<5;return random_state;}
 void net_assert(const char*s){fault=1;serial("NET assertion: ");serial(s);serial("\n");}
-int strncmp(const char*a,const char*b,usize n){while(n--){if(*a!=*b)return (u8)*a-(u8)*b;if(!*a)return 0;a++;b++;}return 0;}
 static err_t output(struct netif*n,struct pbuf*p){
     if(realtek){if(p->tot_len>1518)return ERR_IF;pbuf_copy_partial(p,packet,p->tot_len,0);return (realtek==1?rtl_send(packet,p->tot_len):pcnet_send(packet,p->tot_len))?ERR_IF:ERR_OK;}
     static int logged;if(!logged){logged=1;char v[16];serial("NET first TX length ");number(v,p->tot_len);serial(v);serial(" status ");number(v,reg(8));serial(v);serial("\n");}

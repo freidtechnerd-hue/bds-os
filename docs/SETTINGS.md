@@ -46,10 +46,12 @@ requires 256 MiB.
 
 - **Colors:** cloud wallpaper or the amber desktop background. Color output
   stays RGB32 (8 bits for each RGB channel); this is not a 16/24-bit mode switch.
-- **Fonts:** built-in, default PSF, bold PSF, or a PSF1 file selected in File
-  Manager. The preview updates immediately. Glyphs are normalized to 8×8 cells.
-  A selected custom font is copied to `/FONTS/USER.PSF` on the system volume
+- **Fonts:** antialiased Smooth text (S), built-in, default PSF, bold PSF, or a
+  PSF1/TrueType file selected in File Manager (T opens the TrueType picker). The preview updates immediately. Smooth
+  text uses 8×12 glyph coverage; PSF glyphs are normalized to 8×8 cells.
+  A selected custom font is copied to `/FONTS/USER.PSF` or `/FONTS/USER.TTF` on the system volume
   so it remains available after removing its original media.
+  TrueType currently renders printable ASCII into fixed 8×12 cells; see [font support](FONTS.md).
 - **Sounds:** master volume, mute, system-chime enable/disable and a startup
   sound test. Master volume affects the PCM mix for all apps. The test honors
   mute, volume and the system-sound setting. AC'97/basic Intel HDA hardware is
@@ -68,5 +70,7 @@ VBoxManage setextradata "bds-os" "CustomVideoMode5" "3840x2160x32"
 ```
 
 Use enough video RAM (64 MiB for a 4K RGB32 framebuffer). Firmware may still
-decline a mode; only detected modes appear in Settings. There is no EDID
-validation, hardware acceleration, automatic display resizing or DPI scaling.
+decline a mode; only detected modes appear in Settings. EDID is validated for
+boot-time Auto selection. Hardware acceleration, host-window-driven resizing
+and DPI scaling are not implemented. The x64 preview uses the boot framebuffer
+and cannot perform live VBE mode switching.
